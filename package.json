@@ -1,10 +1,10 @@
 {
-  "name": "webpack-userscript-template",
-  "description": "Build your UserScript with webpack",
-  "version": "0.0.1",
+  "name": "wme-wazemy",
+  "description": "Tampermonkey script for Waze map editing in Malaysia",
+  "version": "2024.05.31",
   "author": {
-    "name": "Trim21",
-    "email": "trim21me@gmail.com"
+    "name": "junyianl",
+    "email": "junyian@gmail.com"
   },
   "scripts": {
     "format": "prettier -w ./",
@@ -16,7 +16,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/trim21/webpack-userscript-template"
+    "url": "https://github.com/junyian/wme-wazemy"
   },
   "private": true,
   "dependencies": {

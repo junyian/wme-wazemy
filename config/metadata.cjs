@@ -7,16 +7,14 @@ const {
 
 module.exports = {
   name: {
-    $: "webpack-userscript-template",
-    cn: "中文名",
-    en: "english name",
+    $: "WME WazeMY"
   },
-  namespace: "https://trim21.me/",
+  namespace: "https://www.github.com/junyian/",
   version: version,
   author: author,
   source: repository.url,
-  // 'license': 'MIT',
-  match: ["*://www.example.com/", "*://example.com/*"],
+  license: 'MIT',
+  match: ["*://www.waze.com/editor*", "*://www.waze.com/*/editor*"],
   require: [
     `https://cdn.jsdelivr.net/npm/jquery@${dependencies.jquery}/dist/jquery.min.js`,
   ],

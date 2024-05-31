@@ -1,4 +1,4 @@
-# this workflow build from master branch and upload dist directory to "preview-dist" branch
+# this workflow build from main branch and upload dist directory to "preview-dist" branch
 # remove this if you don't need it.
 
 name: deploy-preview
@@ -6,7 +6,7 @@ name: deploy-preview
 on:
   push:
     branches:
-      - master
+      - main 
 
 jobs:
   deploy:
