@@ -16,7 +16,7 @@ module.exports = {
   license: 'MIT',
   match: ["*://www.waze.com/editor*", "*://www.waze.com/*/editor*"],
   require: [
-    `https://cdn.jsdelivr.net/npm/jquery@${dependencies.jquery}/dist/jquery.min.js`,
+    `https://greasyfork.org/scripts/24851-wazewrap/code/WazeWrap.js`
   ],
   grant: ["GM.xmlHttpRequest"],
   connect: ["httpbin.org"],
