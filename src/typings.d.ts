@@ -37,4 +37,19 @@ interface W {
     convertGeoJSONToWkt(geometry: string /* WKT string */): GeoJSON.Geometry;
   };
 }
+
+interface Interface {
+  ShowScriptUpdate(
+    scriptName: string,
+    version: string,
+    updateHTML: string,
+    greasyforkLink: string,
+    forumLink?: string,
+  ): void;
+}
+
+interface WazeWrap {
+  Interface: Interface;
+}
 declare var W: W;
+declare var WazeWrap: WazeWrap;
