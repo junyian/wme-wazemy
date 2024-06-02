@@ -605,6 +605,11 @@ class PluginTooltip {
     constructor() {
         this.initialize();
     }
+    /**
+     * Initializes the plugin by adding settings into the tab pane, setting the initial state of the settings based on the last stored value, and adding a hidden tooltip window.
+     *
+     * @return {void} This function does not return anything.
+     */
     initialize() {
         // Add settings into tab pane.
         const settingsHTML = `<input type="checkbox" id="wazemySettings_tooltip_enable"/>
@@ -628,16 +633,32 @@ class PluginTooltip {
         $(document.body).append(tooltipHTML);
         console.log("[WazeMY] PluginTooltip initialized.");
     }
+    /**
+     * Enables the PluginTooltip by registering the "mousemove" event, showing the tooltip, and logging a message.
+     *
+     * @return {void} This function does not return anything.
+     */
     enable() {
         WazeWrap.Events.register("mousemove", null, this.showTooltip);
         $("#wazemyTooltip").show();
         console.log("[WazeMY] PluginTooltip enabled.");
     }
+    /**
+     * Disables the PluginTooltip by unregistering the "mousemove" event, hiding the tooltip, and logging a message.
+     *
+     * @return {void} This function does not return anything.
+     */
     disable() {
         WazeWrap.Events.unregister("mousemove", null, this.showTooltip);
         $("#wazemyTooltip").hide();
         console.log("[WazeMY] PluginTooltip disabled.");
     }
+    /**
+     * Updates the settings of the PluginTooltip based on the provided settings object.
+     *
+     * @param {any} settings - The new settings object.
+     * @return {void} This function does not return anything.
+     */
     updateSettings(settings) {
         if (settings.enable === true) {
             this.enable();
@@ -647,6 +668,12 @@ class PluginTooltip {
         }
         console.log("[WazeMY] PluginTooltip settings updated.", settings);
     }
+    /**
+     * Shows the tooltip at the mouse position.
+     *
+     * @param {MouseEvent} e - The mouse event.
+     * @return {void} This function does not return anything.
+     */
     showTooltip(e) {
         let output = "";
         let showTooltip = false;
@@ -718,22 +745,47 @@ class PluginCopyLatLon {
     constructor() {
         this.initialize();
     }
+    /**
+     * Initialize plugin.
+     *
+     * @return {void} This function does not return anything.
+     */
     initialize() {
         const settingsHTML = `<div>Ctrl+Alt+C: <i>Copy lat/lon of mouse position to clipboard.</i></div>`;
         $("#wazemySettings_shortcuts").append(settingsHTML);
         this.enable(); // Manually enable plugin since there is no settings to trigger this.
         console.log("[WazeMY] PluginCopyLatLon initialized.");
     }
+    /**
+     * Enable plugin.
+     *
+     * @return {void} This function does not return anything.
+     */
     enable() {
         new WazeWrap.Interface.Shortcut("WazeMY_latloncopy", "Copies lat/lon of mouse position to clipboard.", "wazemy", "WazeMY", "CA+c", this.copyLatLon, null).add();
         console.log("[WazeMY] PluginCopyLatLon enabled.");
     }
+    /**
+     * Disable plugin.
+     *
+     * @return {void} This function does not return anything.
+     */
     disable() {
         console.log("[WazeMY] PluginCopyLatLon disabled.");
     }
+    /**
+     * Updates the settings of the PluginCopyLatLon based on the provided settings object.
+     *
+     * @return {void} This function does not return anything.
+     */
     updateSettings(settings) {
         console.log("[WazeMY] PluginCopyLatLon settings updated.", settings);
     }
+    /**
+     * Copies lat/lon of mouse position to clipboard.
+     *
+     * @return {void} This function does not return anything.
+     */
     copyLatLon() {
         const latlon = $(".wz-map-ol-control-span-mouse-position").text();
         navigator.clipboard.writeText(latlon);
