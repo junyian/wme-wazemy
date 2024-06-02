@@ -46,7 +46,11 @@ interface Interface {
     greasyforkLink: string,
     forumLink?: string,
   ): void;
-  Shortcut(
+  Shortcut: any; // TODO: Expand Shortcut class
+}
+
+declare class Shortcut {
+  constructor(
     name: string,
     desc: string,
     group: string,
@@ -54,7 +58,8 @@ interface Interface {
     shortcut: string,
     callback: () => void,
     scope: null,
-  ): any;
+  );
+  add(): void;
 }
 
 interface WazeWrap {

@@ -50,6 +50,8 @@ async function initializeWazeMY() {
   );
 
   const pluginManager = PluginManager.instance;
+
+  pluginManager.addPlugin("copylatlon", "PluginCopyLatLon");
 }
 
 main().catch((e) => {
