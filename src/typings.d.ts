@@ -36,6 +36,7 @@ interface W {
     convertWktToGeoJSON(geometry: GeoJSON.Geometry): string; // WKT string
     convertGeoJSONToWkt(geometry: string /* WKT string */): GeoJSON.Geometry;
   };
+  map: any;
 }
 
 interface Interface {
@@ -49,6 +50,20 @@ interface Interface {
   Shortcut: any; // TODO: Expand Shortcut class
 }
 
+interface Events {
+  register(
+    event: string,
+    context: null,
+    handler: (e: MouseEvent) => void,
+    errorHandler?: () => {},
+  ): void;
+  unregister(
+    event: string,
+    context: null,
+    handler: (e: MouseEvent) => void,
+    errorHandler?: () => {},
+  ): void;
+}
 declare class Shortcut {
   constructor(
     name: string,
@@ -64,6 +79,7 @@ declare class Shortcut {
 
 interface WazeWrap {
   Interface: Interface;
+  Events: Events;
 }
 declare var W: W;
 declare var WazeWrap: WazeWrap;

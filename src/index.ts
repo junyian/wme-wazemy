@@ -52,6 +52,7 @@ async function initializeWazeMY() {
   const pluginManager = PluginManager.instance;
 
   pluginManager.addPlugin("copylatlon", "PluginCopyLatLon");
+  pluginManager.addPlugin("tooltip", "PluginTooltip");
 }
 
 main().catch((e) => {
