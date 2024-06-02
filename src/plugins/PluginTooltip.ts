@@ -7,6 +7,11 @@ export default class PluginTooltip implements IPlugin {
     this.initialize();
   }
 
+  /**
+   * Initializes the plugin by adding settings into the tab pane, setting the initial state of the settings based on the last stored value, and adding a hidden tooltip window.
+   *
+   * @return {void} This function does not return anything.
+   */
   initialize(): void {
     // Add settings into tab pane.
     const settingsHTML: string = `<input type="checkbox" id="wazemySettings_tooltip_enable"/>
@@ -34,18 +39,34 @@ export default class PluginTooltip implements IPlugin {
     console.log("[WazeMY] PluginTooltip initialized.");
   }
 
+  /**
+   * Enables the PluginTooltip by registering the "mousemove" event, showing the tooltip, and logging a message.
+   *
+   * @return {void} This function does not return anything.
+   */
   enable(): void {
     WazeWrap.Events.register("mousemove", null, this.showTooltip);
     $("#wazemyTooltip").show();
     console.log("[WazeMY] PluginTooltip enabled.");
   }
 
+  /**
+   * Disables the PluginTooltip by unregistering the "mousemove" event, hiding the tooltip, and logging a message.
+   *
+   * @return {void} This function does not return anything.
+   */
   disable(): void {
     WazeWrap.Events.unregister("mousemove", null, this.showTooltip);
     $("#wazemyTooltip").hide();
     console.log("[WazeMY] PluginTooltip disabled.");
   }
 
+  /**
+   * Updates the settings of the PluginTooltip based on the provided settings object.
+   *
+   * @param {any} settings - The new settings object.
+   * @return {void} This function does not return anything.
+   */
   updateSettings(settings: any): void {
     if (settings.enable === true) {
       this.enable();
@@ -55,6 +76,12 @@ export default class PluginTooltip implements IPlugin {
     console.log("[WazeMY] PluginTooltip settings updated.", settings);
   }
 
+  /**
+   * Shows the tooltip at the mouse position.
+   *
+   * @param {MouseEvent} e - The mouse event.
+   * @return {void} This function does not return anything.
+   */
   showTooltip(e: MouseEvent): void {
     let output: string = "";
     let showTooltip: boolean = false;
