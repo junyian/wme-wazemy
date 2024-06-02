@@ -7,7 +7,7 @@
 // @license     MIT
 // @match       *://www.waze.com/editor*
 // @match       *://www.waze.com/*/editor*
-// @require     https://cdn.jsdelivr.net/npm/jquery@^3.7.1/dist/jquery.min.js
+// @require     https://greasyfork.org/scripts/24851-wazewrap/code/WazeWrap.js
 // @grant       GM.xmlHttpRequest
 // @connect     httpbin.org
 // @run-at      document-end
@@ -503,176 +503,197 @@ var update = injectStylesIntoStyleTag_default()(main/* default */.A, options);
 
        /* harmony default export */ const style_main = (main/* default */.A && main/* default */.A.locals ? main/* default */.A.locals : undefined);
 
-;// CONCATENATED MODULE: ./node_modules/@trim21/gm-fetch/dist/index.mjs
-function parseRawHeaders(h) {
-    const s = h.trim();
-    if (!s) {
-        return new Headers();
-    }
-    const array = s.split("\r\n").map((value) => {
-        let s = value.split(":");
-        return [s[0].trim(), s[1].trim()];
-    });
-    return new Headers(array);
-}
-function parseGMResponse(req, res) {
-    return new ResImpl(res.response, {
-        statusCode: res.status,
-        statusText: res.statusText,
-        headers: parseRawHeaders(res.responseHeaders),
-        finalUrl: res.finalUrl,
-        redirected: res.finalUrl === req.url,
-    });
-}
-class ResImpl {
-    constructor(body, init) {
-        this.rawBody = body;
-        this.init = init;
-        this.body = toReadableStream(body);
-        const { headers, statusCode, statusText, finalUrl, redirected } = init;
-        this.headers = headers;
-        this.status = statusCode;
-        this.statusText = statusText;
-        this.url = finalUrl;
-        this.type = "basic";
-        this.redirected = redirected;
-        this._bodyUsed = false;
-    }
-    get bodyUsed() {
-        return this._bodyUsed;
-    }
-    get ok() {
-        return this.status < 300;
-    }
-    arrayBuffer() {
-        if (this.bodyUsed) {
-            throw new TypeError("Failed to execute 'arrayBuffer' on 'Response': body stream already read");
+;// CONCATENATED MODULE: ./src/PluginFactory.ts
+class PluginFactory {
+    static createPlugin(pluginName) {
+        switch (pluginName) {
+            default:
+                throw new Error(`Unknown plugin: ${pluginName}`);
         }
-        this._bodyUsed = true;
-        return this.rawBody.arrayBuffer();
     }
-    blob() {
-        if (this.bodyUsed) {
-            throw new TypeError("Failed to execute 'blob' on 'Response': body stream already read");
-        }
-        this._bodyUsed = true;
-        // `slice` will use empty string as default value, so need to pass all arguments.
-        return Promise.resolve(this.rawBody.slice(0, this.rawBody.size, this.rawBody.type));
-    }
-    clone() {
-        if (this.bodyUsed) {
-            throw new TypeError("Failed to execute 'clone' on 'Response': body stream already read");
-        }
-        return new ResImpl(this.rawBody, this.init);
-    }
-    formData() {
-        if (this.bodyUsed) {
-            throw new TypeError("Failed to execute 'formData' on 'Response': body stream already read");
-        }
-        this._bodyUsed = true;
-        return this.rawBody.text().then(decode);
-    }
-    async json() {
-        if (this.bodyUsed) {
-            throw new TypeError("Failed to execute 'json' on 'Response': body stream already read");
-        }
-        this._bodyUsed = true;
-        return JSON.parse(await this.rawBody.text());
-    }
-    text() {
-        if (this.bodyUsed) {
-            throw new TypeError("Failed to execute 'text' on 'Response': body stream already read");
-        }
-        this._bodyUsed = true;
-        return this.rawBody.text();
-    }
-}
-function decode(body) {
-    const form = new FormData();
-    body
-        .trim()
-        .split("&")
-        .forEach(function (bytes) {
-        if (bytes) {
-            const split = bytes.split("=");
-            const name = split.shift()?.replace(/\+/g, " ");
-            const value = split.join("=").replace(/\+/g, " ");
-            form.append(decodeURIComponent(name), decodeURIComponent(value));
-        }
-    });
-    return form;
-}
-function toReadableStream(value) {
-    return new ReadableStream({
-        start(controller) {
-            controller.enqueue(value);
-            controller.close();
-        },
-    });
 }
 
-async function GM_fetch(input, init) {
-    const request = new Request(input, init);
-    let data;
-    if (init?.body) {
-        data = await request.text();
+;// CONCATENATED MODULE: ./src/SettingsStorage.ts
+class SettingsStorage {
+    /**
+     * Initializes a new instance of the SettingsStorage class with the specified storage key.
+     *
+     * @param {string} storageKey - The key used to store the settings in the local storage.
+     */
+    constructor(storageKey) {
+        this.storageKey = storageKey;
     }
-    return await XHR(request, init, data);
-}
-function XHR(request, init, data) {
-    return new Promise((resolve, reject) => {
-        if (request.signal && request.signal.aborted) {
-            return reject(new DOMException("Aborted", "AbortError"));
+    /**
+     * Saves the given settings to the local storage.
+     *
+     * @param {any} settings - The settings to be saved.
+     * @return {void} This function does not return anything.
+     */
+    saveSettings(settings) {
+        localStorage.setItem(this.storageKey, JSON.stringify(settings));
+    }
+    /**
+     * Loads the settings from the local storage.
+     *
+     * @return {any} The loaded settings, or null if no settings are found.
+     */
+    loadSettings() {
+        const settings = localStorage.getItem(this.storageKey);
+        return settings ? JSON.parse(settings) : null;
+    }
+    /**
+     * Updates a specific setting in the local storage.
+     *
+     * @param {string} key - The key of the setting to update.
+     * @param {any} value - The new value for the setting.
+     * @return {void} This function does not return anything.
+     */
+    updateSetting(key, value) {
+        const settings = this.loadSettings() || {};
+        settings[key] = value;
+        this.saveSettings(settings);
+    }
+    /**
+     * Retrieves a specific setting from the local storage.
+     *
+     * @param {string} key - The key of the setting to retrieve.
+     * @return {any} The value of the setting, or null if the setting is not found.
+     */
+    getSetting(key) {
+        const settings = this.loadSettings();
+        return settings ? settings[key] : null;
+    }
+    /**
+     * Removes a specific setting from the local storage.
+     *
+     * @param {string} key - The key of the setting to remove.
+     * @return {void} This function does not return anything.
+     */
+    removeSetting(key) {
+        const settings = this.loadSettings();
+        if (settings && key in settings) {
+            delete settings[key];
+            this.saveSettings(settings);
         }
-        GM.xmlHttpRequest({
-            url: request.url,
-            method: gmXHRMethod(request.method.toUpperCase()),
-            headers: Object.fromEntries(new Headers(init?.headers).entries()),
-            data: data,
-            responseType: "blob",
-            onload(res) {
-                resolve(parseGMResponse(request, res));
-            },
-            onabort() {
-                reject(new DOMException("Aborted", "AbortError"));
-            },
-            ontimeout() {
-                reject(new TypeError("Network request failed, timeout"));
-            },
-            onerror(err) {
-                reject(new TypeError("Failed to fetch: " + err.finalUrl));
-            },
-        });
-    });
-}
-const httpMethods = ["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "TRACE", "OPTIONS", "CONNECT"];
-// a ts type helper to narrow type
-function includes(array, element) {
-    return array.includes(element);
-}
-function gmXHRMethod(method) {
-    if (includes(httpMethods, method)) {
-        return method;
     }
-    throw new Error(`unsupported http method ${method}`);
 }
+SettingsStorage.instance = new SettingsStorage("WME_wazemySettings");
+
+;// CONCATENATED MODULE: ./src/PluginManager.ts
 
 
-//# sourceMappingURL=index.mjs.map
+class PluginManager {
+    constructor(settings) {
+        this.plugins = {};
+        this.settingsStorage = settings;
+    }
+    /**
+     * Adds a plugin to the PluginManager.
+     *
+     * @param {string} key - The key to associate the plugin with.
+     * @param {string} type - The type of plugin to create.
+     * @return {void} This function does not return anything.
+     */
+    addPlugin(key, type) {
+        const plugin = PluginFactory.createPlugin(type);
+        this.plugins[key] = plugin;
+        const pluginSettings = this.settingsStorage.getSetting(key);
+        if (pluginSettings) {
+            plugin.updateSettings(pluginSettings);
+        }
+    }
+    /**
+     * Removes a plugin from the PluginManager.
+     *
+     * @param {string} key - The key associated with the plugin to remove.
+     * @return {void} This function does not return anything.
+     */
+    removePlugin(key) {
+        if (this.plugins[key]) {
+            this.settingsStorage.removeSetting(key);
+            delete this.plugins[key];
+        }
+    }
+    /**
+     * Enables a plugin with the given key if it exists.
+     *
+     * @param {string} key - The key of the plugin to enable.
+     * @return {void} This function does not return anything.
+     */
+    enablePlugin(key) {
+        if (this.plugins[key]) {
+            this.plugins[key].enable();
+        }
+    }
+    /**
+     * Disables a plugin with the given key if it exists.
+     *
+     * @param {string} key - The key of the plugin to disable.
+     * @return {void} This function does not return anything.
+     */
+    disablePlugin(key) {
+        if (this.plugins[key]) {
+            this.plugins[key].disable();
+        }
+    }
+    /**
+     * Updates the settings of a plugin associated with the given key.
+     *
+     * @param {string} key - The key associated with the plugin.
+     * @param {any} settings - The new settings to be applied to the plugin.
+     * @return {void} This function does not return anything.
+     */
+    updatePluginSettings(key, settings) {
+        if (this.plugins[key]) {
+            this.plugins[key].updateSettings(settings);
+            this.settingsStorage.updateSetting(key, settings);
+        }
+    }
+}
+PluginManager.instance = new PluginManager(SettingsStorage.instance);
 
 ;// CONCATENATED MODULE: ./src/index.ts
 
-//checkout homepage https://github.com/Trim21/gm-fetch for @trim21/gm-fetch
 
+const updateMessage = `Complete rewrite of the WazeMY script to TypeScript.<br>
+  Bugfixes:<br>
+  <ul>
+    <li>Tooltip is not removed when feature is disabled via settings.</li>
+  </ul>
+  Improvements:<br>
+  <ul>
+    <li>Modernized the copy of lat/lon method.</li>
+  </ul>
+  Todo:<br>
+  <ul>
+    <li>Picture zoom in.</li>
+  </ul>`;
 async function src_main() {
-    console.log("script start");
-    // cross domain requests
-    console.log(`uuid: ${await fetchExample()}`);
+    console.log("[WazeMY] Script started");
+    document.addEventListener("wme-ready", initializeWazeMY, { once: true });
 }
-async function fetchExample() {
-    const res = await GM_fetch("https://httpbin.org/uuid");
-    const data = await res.json();
-    return data.uuid;
+async function initializeWazeMY() {
+    console.log("[WazeMY] WME ready");
+    const { tabLabel, tabPane } = W.userscripts.registerSidebarTab("wazemy");
+    tabLabel.innerHTML = "WazeMY";
+    tabLabel.title = "WazeMY";
+    tabPane.innerHTML = `<div>
+  <h4>WazeMY</h4>
+  <b>${GM_info.script.version}</b>
+</div>
+<fieldset id="wazemySettings" style="border: 1px solid silver; padding: 8px; border-radius: 4px;">
+  <legend style="margin-bottom:0px; border-bottom-style:none;width:auto;">
+    <h6>Settings</h6></legend>
+  <div id="wazemySettings_settings"></div>
+</fieldset>
+<fieldset style="border: 1px solid silver; padding: 8px; border-radius: 4px;">
+  <legend style="margin-bottom:0px; border-bottom-style:none;width:auto;">
+  <h6>Shortcuts</h6></legend>
+  <div id="wazemySettings_shortcuts">
+  </div>
+</fieldset>`;
+    WazeWrap.Interface.ShowScriptUpdate("WME WazeMY", GM_info.script.version, updateMessage, "https://greasyfork.org/en/scripts/404584-wazemy", "javascript:alert('No forum available');");
+    const pluginManager = PluginManager.instance;
 }
 src_main().catch((e) => {
     console.log(e);
