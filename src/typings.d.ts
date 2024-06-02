@@ -46,6 +46,15 @@ interface Interface {
     greasyforkLink: string,
     forumLink?: string,
   ): void;
+  Shortcut(
+    name: string,
+    desc: string,
+    group: string,
+    title: string,
+    shortcut: string,
+    callback: () => void,
+    scope: null,
+  ): any;
 }
 
 interface WazeWrap {
