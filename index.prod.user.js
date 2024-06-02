@@ -32,7 +32,20 @@
 
 var ___CSS_LOADER_EXPORT___ = _node_modules_css_loader_dist_runtime_api_js__WEBPACK_IMPORTED_MODULE_1___default()((_node_modules_css_loader_dist_runtime_noSourceMaps_js__WEBPACK_IMPORTED_MODULE_0___default()));
 // Module
-___CSS_LOADER_EXPORT___.push([module.id, ``, ""]);
+___CSS_LOADER_EXPORT___.push([module.id, `.wazemySettings {
+  border: 1px solid;
+  padding: 8px;
+  border-radius: 4px;
+}
+.wazemySettings legend {
+  margin-bottom: 0px;
+  border-bottom-style: none;
+  width: auto;
+}
+.wazemySettings h6 {
+  margin-bottom: 0px;
+}
+`, ""]);
 // Exports
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (___CSS_LOADER_EXPORT___);
 
@@ -503,10 +516,41 @@ var update = injectStylesIntoStyleTag_default()(main/* default */.A, options);
 
        /* harmony default export */ const style_main = (main/* default */.A && main/* default */.A.locals ? main/* default */.A.locals : undefined);
 
+;// CONCATENATED MODULE: ./src/plugins/PluginCopyLatLon.ts
+class PluginCopyLatLon {
+    constructor() {
+        this.initialize();
+    }
+    initialize() {
+        const settingsHTML = `<div>Ctrl+Alt+C: <i>Copy lat/lon of mouse position to clipboard.</i></div>`;
+        $("#wazemySettings_shortcuts").append(settingsHTML);
+        this.enable(); // Manually enable plugin since there is no settings to trigger this.
+        console.log("[WazeMY] PluginCopyLatLon initialized.");
+    }
+    enable() {
+        new WazeWrap.Interface.Shortcut("WazeMY_latloncopy", "Copies lat/lon of mouse position to clipboard.", "wazemy", "WazeMY", "CA+c", this.copyLatLon, null).add();
+        console.log("[WazeMY] PluginCopyLatLon enabled.");
+    }
+    disable() {
+        console.log("[WazeMY] PluginCopyLatLon disabled.");
+    }
+    updateSettings(settings) {
+        console.log("[WazeMY] PluginCopyLatLon settings updated.", settings);
+    }
+    copyLatLon() {
+        const latlon = $(".wz-map-ol-control-span-mouse-position").text();
+        navigator.clipboard.writeText(latlon);
+    }
+}
+
 ;// CONCATENATED MODULE: ./src/PluginFactory.ts
+
 class PluginFactory {
     static createPlugin(pluginName) {
         switch (pluginName) {
+            case "PluginCopyLatLon":
+                return new PluginCopyLatLon();
+                break;
             default:
                 throw new Error(`Unknown plugin: ${pluginName}`);
         }
@@ -681,19 +725,20 @@ async function initializeWazeMY() {
   <h4>WazeMY</h4>
   <b>${GM_info.script.version}</b>
 </div>
-<fieldset id="wazemySettings" style="border: 1px solid silver; padding: 8px; border-radius: 4px;">
-  <legend style="margin-bottom:0px; border-bottom-style:none;width:auto;">
+<fieldset class="wazemySettings">
+  <legend class="wazemySettingsLegend">
     <h6>Settings</h6></legend>
   <div id="wazemySettings_settings"></div>
 </fieldset>
-<fieldset style="border: 1px solid silver; padding: 8px; border-radius: 4px;">
-  <legend style="margin-bottom:0px; border-bottom-style:none;width:auto;">
+<fieldset class="wazemySettings">
+  <legend class="wazemySettingsLegend">
   <h6>Shortcuts</h6></legend>
   <div id="wazemySettings_shortcuts">
   </div>
 </fieldset>`;
     WazeWrap.Interface.ShowScriptUpdate("WME WazeMY", GM_info.script.version, updateMessage, "https://greasyfork.org/en/scripts/404584-wazemy", "javascript:alert('No forum available');");
     const pluginManager = PluginManager.instance;
+    pluginManager.addPlugin("copylatlon", "PluginCopyLatLon");
 }
 src_main().catch((e) => {
     console.log(e);
