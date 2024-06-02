@@ -45,6 +45,22 @@ ___CSS_LOADER_EXPORT___.push([module.id, `.wazemySettings {
 .wazemySettings h6 {
   margin-bottom: 0px;
 }
+.wazemySettings input {
+  margin-top: 0px;
+}
+#wazemyTooltip {
+  height: auto;
+  width: auto;
+  background-color: rgba(0, 0, 0, 0.5);
+  color: white;
+  border-radius: 4px;
+  padding: 4px;
+  position: absolute;
+  top: 0px;
+  left: 0px;
+  visibility: hidden;
+  z-index: 10000;
+}
 `, ""]);
 // Exports
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (___CSS_LOADER_EXPORT___);
@@ -516,47 +532,6 @@ var update = injectStylesIntoStyleTag_default()(main/* default */.A, options);
 
        /* harmony default export */ const style_main = (main/* default */.A && main/* default */.A.locals ? main/* default */.A.locals : undefined);
 
-;// CONCATENATED MODULE: ./src/plugins/PluginCopyLatLon.ts
-class PluginCopyLatLon {
-    constructor() {
-        this.initialize();
-    }
-    initialize() {
-        const settingsHTML = `<div>Ctrl+Alt+C: <i>Copy lat/lon of mouse position to clipboard.</i></div>`;
-        $("#wazemySettings_shortcuts").append(settingsHTML);
-        this.enable(); // Manually enable plugin since there is no settings to trigger this.
-        console.log("[WazeMY] PluginCopyLatLon initialized.");
-    }
-    enable() {
-        new WazeWrap.Interface.Shortcut("WazeMY_latloncopy", "Copies lat/lon of mouse position to clipboard.", "wazemy", "WazeMY", "CA+c", this.copyLatLon, null).add();
-        console.log("[WazeMY] PluginCopyLatLon enabled.");
-    }
-    disable() {
-        console.log("[WazeMY] PluginCopyLatLon disabled.");
-    }
-    updateSettings(settings) {
-        console.log("[WazeMY] PluginCopyLatLon settings updated.", settings);
-    }
-    copyLatLon() {
-        const latlon = $(".wz-map-ol-control-span-mouse-position").text();
-        navigator.clipboard.writeText(latlon);
-    }
-}
-
-;// CONCATENATED MODULE: ./src/PluginFactory.ts
-
-class PluginFactory {
-    static createPlugin(pluginName) {
-        switch (pluginName) {
-            case "PluginCopyLatLon":
-                return new PluginCopyLatLon();
-                break;
-            default:
-                throw new Error(`Unknown plugin: ${pluginName}`);
-        }
-    }
-}
-
 ;// CONCATENATED MODULE: ./src/SettingsStorage.ts
 class SettingsStorage {
     /**
@@ -622,6 +597,164 @@ class SettingsStorage {
     }
 }
 SettingsStorage.instance = new SettingsStorage("WME_wazemySettings");
+
+;// CONCATENATED MODULE: ./src/plugins/PluginTooltip.ts
+
+
+class PluginTooltip {
+    constructor() {
+        this.initialize();
+    }
+    initialize() {
+        // Add settings into tab pane.
+        const settingsHTML = `<input type="checkbox" id="wazemySettings_tooltip_enable"/>
+<label for="wazemySettings_tooltip_enable">Enable map tooltip</label>`;
+        $("#wazemySettings_settings").append(settingsHTML);
+        $("#wazemySettings_tooltip_enable").on("change", () => {
+            PluginManager.instance.updatePluginSettings("tooltip", {
+                enable: $("#wazemySettings_tooltip_enable").prop("checked"),
+            });
+        });
+        // Set settings according to last stored value.
+        const savedSettings = SettingsStorage.instance.getSetting("tooltip");
+        if (savedSettings?.enable === true) {
+            $("#wazemySettings_tooltip_enable").prop("checked", true);
+        }
+        else {
+            $("#wazemySettings_tooltip_enable").prop("checked", false);
+        }
+        // Add hidden tooltip window.
+        const tooltipHTML = `<div id="wazemyTooltip"></div>`;
+        $(document.body).append(tooltipHTML);
+        console.log("[WazeMY] PluginTooltip initialized.");
+    }
+    enable() {
+        WazeWrap.Events.register("mousemove", null, this.showTooltip);
+        $("#wazemyTooltip").show();
+        console.log("[WazeMY] PluginTooltip enabled.");
+    }
+    disable() {
+        WazeWrap.Events.unregister("mousemove", null, this.showTooltip);
+        $("#wazemyTooltip").hide();
+        console.log("[WazeMY] PluginTooltip disabled.");
+    }
+    updateSettings(settings) {
+        if (settings.enable === true) {
+            this.enable();
+        }
+        else {
+            this.disable();
+        }
+        console.log("[WazeMY] PluginTooltip settings updated.", settings);
+    }
+    showTooltip(e) {
+        let output = "";
+        let showTooltip = false;
+        // Manual check of settings because unregistering event is not working.
+        if ($("#wazemySettings_tooltip_enable").prop("checked") === true) {
+            const landmark = W.map.venueLayer.getFeatureBy("renderIntent", "highlight");
+            const segment = W.map.segmentLayer.getFeatureBy("renderIntent", "highlight");
+            if (landmark) {
+                output = `<b>${landmark.attributes.wazeFeature._wmeObject.attributes.name}</b><br>`;
+                const address = landmark.attributes.wazeFeature._wmeObject.getAddress();
+                try {
+                    output += address.getHouseNumber()
+                        ? `${address.getHouseNumber()}, `
+                        : "";
+                    output += address.getStreetName()
+                        ? `${address.getStreetName()}<br>`
+                        : `No street<br>`;
+                    output += `${address.getCityName()}, `;
+                    output += `${address.getStateName()}<br>`;
+                }
+                catch {
+                    output += "No address<br>";
+                }
+                output += `<b>Lock:</b> ${landmark.attributes.wazeFeature._wmeObject.getLockRank() + 1}`;
+                showTooltip = true;
+            }
+            else if (segment) {
+                const segmentId = segment.attributes.wazeFeature.id;
+                const address = segment.attributes.wazeFeature._wmeObject.getAddress();
+                output = `<b>${address.getStreetName()}</b><br>`;
+                output += `${address.getCityName()}, ${address.getStateName()}<br>`;
+                output += `<b>ID:</b> ${segmentId}<br>`;
+                output += `<b>Lock:</b> ${segment.attributes.wazeFeature._wmeObject.getLockRank() + 1}`;
+                showTooltip = true;
+            }
+            const tooltipDiv = $("#wazemyTooltip");
+            if (showTooltip === true) {
+                const tw = tooltipDiv.innerWidth();
+                const th = tooltipDiv.innerHeight();
+                let tooltipX = e.clientX + window.scrollX + 15;
+                let tooltipY = e.clientY + window.scrollY + 15;
+                // Handle cases where tooltip is too near the edge.
+                if (tooltipX + tw > W.map.$map.innerWidth()) {
+                    tooltipX -= tw + 20; // 20 = scroll bar size
+                    if (tooltipX < 0) {
+                        tooltipX = 0;
+                    }
+                }
+                if (tooltipY + th > W.map.$map.innerHeight()) {
+                    tooltipY -= th + 20;
+                    if (tooltipY < 0) {
+                        tooltipY = 0;
+                    }
+                }
+                tooltipDiv.html(output);
+                tooltipDiv.css("top", `${tooltipY}px`);
+                tooltipDiv.css("left", `${tooltipX}px`);
+                tooltipDiv.css("visibility", "visible");
+            }
+            else {
+                tooltipDiv.css("visibility", "hidden");
+            }
+        }
+    }
+}
+
+;// CONCATENATED MODULE: ./src/plugins/PluginCopyLatLon.ts
+class PluginCopyLatLon {
+    constructor() {
+        this.initialize();
+    }
+    initialize() {
+        const settingsHTML = `<div>Ctrl+Alt+C: <i>Copy lat/lon of mouse position to clipboard.</i></div>`;
+        $("#wazemySettings_shortcuts").append(settingsHTML);
+        this.enable(); // Manually enable plugin since there is no settings to trigger this.
+        console.log("[WazeMY] PluginCopyLatLon initialized.");
+    }
+    enable() {
+        new WazeWrap.Interface.Shortcut("WazeMY_latloncopy", "Copies lat/lon of mouse position to clipboard.", "wazemy", "WazeMY", "CA+c", this.copyLatLon, null).add();
+        console.log("[WazeMY] PluginCopyLatLon enabled.");
+    }
+    disable() {
+        console.log("[WazeMY] PluginCopyLatLon disabled.");
+    }
+    updateSettings(settings) {
+        console.log("[WazeMY] PluginCopyLatLon settings updated.", settings);
+    }
+    copyLatLon() {
+        const latlon = $(".wz-map-ol-control-span-mouse-position").text();
+        navigator.clipboard.writeText(latlon);
+    }
+}
+
+;// CONCATENATED MODULE: ./src/PluginFactory.ts
+
+
+class PluginFactory {
+    static createPlugin(pluginName) {
+        switch (pluginName) {
+            case "PluginTooltip":
+                return new PluginTooltip();
+            case "PluginCopyLatLon":
+                return new PluginCopyLatLon();
+            default:
+                throw new Error(`Unknown plugin: ${pluginName}`);
+        }
+    }
+}
 
 ;// CONCATENATED MODULE: ./src/PluginManager.ts
 
@@ -739,6 +872,7 @@ async function initializeWazeMY() {
     WazeWrap.Interface.ShowScriptUpdate("WME WazeMY", GM_info.script.version, updateMessage, "https://greasyfork.org/en/scripts/404584-wazemy", "javascript:alert('No forum available');");
     const pluginManager = PluginManager.instance;
     pluginManager.addPlugin("copylatlon", "PluginCopyLatLon");
+    pluginManager.addPlugin("tooltip", "PluginTooltip");
 }
 src_main().catch((e) => {
     console.log(e);
