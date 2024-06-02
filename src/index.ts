@@ -29,13 +29,13 @@ async function initializeWazeMY() {
   <h4>WazeMY</h4>
   <b>${GM_info.script.version}</b>
 </div>
-<fieldset id="wazemySettings" style="border: 1px solid silver; padding: 8px; border-radius: 4px;">
-  <legend style="margin-bottom:0px; border-bottom-style:none;width:auto;">
+<fieldset class="wazemySettings">
+  <legend class="wazemySettingsLegend">
     <h6>Settings</h6></legend>
   <div id="wazemySettings_settings"></div>
 </fieldset>
-<fieldset style="border: 1px solid silver; padding: 8px; border-radius: 4px;">
-  <legend style="margin-bottom:0px; border-bottom-style:none;width:auto;">
+<fieldset class="wazemySettings">
+  <legend class="wazemySettingsLegend">
   <h6>Shortcuts</h6></legend>
   <div id="wazemySettings_shortcuts">
   </div>
