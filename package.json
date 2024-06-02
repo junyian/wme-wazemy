@@ -29,6 +29,7 @@
     ]
   },
   "devDependencies": {
+    "@types/geojson": "^7946.0.14",
     "@types/greasemonkey": "^4.0.7",
     "@types/jquery": "^3.5.29",
     "@types/node": "^20.12.7",
