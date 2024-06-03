@@ -67,6 +67,12 @@ interface Events {
     errorHandler?: () => {},
   ): void;
 }
+
+interface User {
+  Rank(): string;
+  Username(): string;
+}
+
 declare class Shortcut {
   constructor(
     name: string,
@@ -81,8 +87,9 @@ declare class Shortcut {
 }
 
 interface WazeWrap {
-  Interface: Interface;
   Events: Events;
+  Interface: Interface;
+  User: User;
 }
 declare var W: W;
 declare var WazeWrap: WazeWrap;

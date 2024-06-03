@@ -54,6 +54,7 @@ async function initializeWazeMY() {
   pluginManager.addPlugin("copylatlon", "PluginCopyLatLon");
   pluginManager.addPlugin("tooltip", "PluginTooltip");
   pluginManager.addPlugin("trafcam", "PluginTrafficCameras");
+  pluginManager.addPlugin("kvmr", "PluginKVMR");
 }
 
 main().catch((e) => {
