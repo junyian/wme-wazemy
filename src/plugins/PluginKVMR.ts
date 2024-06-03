@@ -158,34 +158,47 @@ export default class PluginKVMR implements IPlugin {
         var holes = raid_mapLayer.features[i].attributes.holes;
 
         if (raidCenterCheck === true) {
-          //var str = $('#topbar-container > div > div.location-info-region > div').text();
-          var str =
-            document.getElementsByClassName("#location-info")[0].innerText;
+          var str = $(
+            "#topbar-container > div > div.location-info-region > div",
+          ).text();
 
-          var n2 = str.indexOf(" - ");
-
-          if (n2 > 0) {
-            // var n = str.length;
-            // var res = str.substring(n2 + 2, n);
-            // var rescount = res.indexOf(" - ");
-            // if (rescount > 0) {
-            // var n3 = res.length;
-            // var res2 = res.substring(rescount + 2, n3);
-            // }
-            //				var raidLocationLabel = 'Klang Valley ' + raid_mapLayer.features[i].attributes.number + ' - ' + res2;
-            var raidLocationLabel =
+          const location: string[] = str.split(" - ");
+          if (location.length > 1) {
+            location[1] =
               "Klang Valley MapRaid " +
               raid_mapLayer.features[i].attributes.number;
           } else {
-            var raidLocationLabel =
+            location[0] =
               "Klang Valley MapRaid " +
-              raid_mapLayer.features[i].attributes.number +
-              " - " +
-              $("#location-info").text();
+              raid_mapLayer.features[i].attributes.number;
           }
-          //setTimeout(function(){$('#topbar-container > div > div.location-info-region > div').text(raidLocationLabel);},200);
+          const raidLocationLabel = location.join(" - ");
+
+          // var n2 = str.indexOf(" - ");
+
+          // if (n2 > 0) {
+          // var n = str.length;
+          // var res = str.substring(n2 + 2, n);
+          // var rescount = res.indexOf(" - ");
+          // if (rescount > 0) {
+          // var n3 = res.length;
+          // var res2 = res.substring(rescount + 2, n3);
+          // }
+          //				var raidLocationLabel = 'Klang Valley ' + raid_mapLayer.features[i].attributes.number + ' - ' + res2;
+          /*    var raidLocationLabel =
+               "Klang Valley MapRaid " +
+               raid_mapLayer.features[i].attributes.number;
+           } else {
+             var raidLocationLabel =
+               "Klang Valley MapRaid " +
+               raid_mapLayer.features[i].attributes.number +
+               " - " +
+               $('#topbar-container > div > div.location-info-region > div').text();
+           } */
           setTimeout(function () {
-            $("#location-info").text(raidLocationLabel);
+            $("#topbar-container > div > div.location-info-region > div").text(
+              raidLocationLabel,
+            );
           }, 200);
           if (holes === "false") {
             break;
@@ -217,6 +230,10 @@ export default class PluginKVMR implements IPlugin {
 
   disable(): void {
     this.raid_mapLayer.setVisibility(false);
+    const mro_map = W.map;
+    mro_map.events.unregister("moveend", W.map);
+    mro_map.events.unregister("zoomend", W.map);
+
     console.log("PluginKVMR disabled.");
   }
 
