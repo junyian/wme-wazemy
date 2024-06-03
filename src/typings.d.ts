@@ -1,4 +1,7 @@
 declare module "*.less";
+declare var trafficCamsData: any;
+
+declare var OpenLayers: any;
 
 interface WmeState {
   isInitialMapDataLoaded: boolean; // if `wme-map-data-loaded` has already been dispatched
