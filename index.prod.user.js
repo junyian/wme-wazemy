@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name        WME WazeMY
 // @namespace   https://www.github.com/junyian/
-// @version     2024.06.03
+// @version     2024.06.03.01
 // @author      junyianl <junyian@gmail.com>
 // @source      https://github.com/junyian/wme-wazemy
 // @license     MIT
@@ -1382,7 +1382,7 @@ class PluginFactory {
                     "lufti_bihar",
                     "DINKAFTAC",
                     "dinohoo",
-                    "Inyshen",
+                    "inyshen",
                     "RapidGod",
                     "omegahawk",
                     "firman_bakti",
@@ -1394,7 +1394,7 @@ class PluginFactory {
                     "Somebal",
                     "james890526",
                     "pamyskywalker",
-                    "Hooijack",
+                    "hooijack",
                     "zumaidi",
                     "godericbal",
                     "TinyWizard",
