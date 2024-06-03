@@ -136,6 +136,12 @@ export default class PluginKVMR implements IPlugin {
 
     console.log("PluginKVMR initialized.");
 
+    /**
+     * Updates the current raid location on the map based on the user's current location.
+     *
+     * @param {any} raid_mapLayer - The map layer containing the raid information.
+     * @return {void} This function does not return anything.
+     */
     function currentRaidLocation(raid_mapLayer: any): void {
       var mro_Map = W.map;
 
@@ -168,33 +174,13 @@ export default class PluginKVMR implements IPlugin {
               "Klang Valley MapRaid " +
               raid_mapLayer.features[i].attributes.number;
           } else {
-            location[0] =
+            location.push(
               "Klang Valley MapRaid " +
-              raid_mapLayer.features[i].attributes.number;
+                raid_mapLayer.features[i].attributes.number,
+            );
           }
           const raidLocationLabel = location.join(" - ");
 
-          // var n2 = str.indexOf(" - ");
-
-          // if (n2 > 0) {
-          // var n = str.length;
-          // var res = str.substring(n2 + 2, n);
-          // var rescount = res.indexOf(" - ");
-          // if (rescount > 0) {
-          // var n3 = res.length;
-          // var res2 = res.substring(rescount + 2, n3);
-          // }
-          //				var raidLocationLabel = 'Klang Valley ' + raid_mapLayer.features[i].attributes.number + ' - ' + res2;
-          /*    var raidLocationLabel =
-               "Klang Valley MapRaid " +
-               raid_mapLayer.features[i].attributes.number;
-           } else {
-             var raidLocationLabel =
-               "Klang Valley MapRaid " +
-               raid_mapLayer.features[i].attributes.number +
-               " - " +
-               $('#topbar-container > div > div.location-info-region > div').text();
-           } */
           setTimeout(function () {
             $("#topbar-container > div > div.location-info-region > div").text(
               raidLocationLabel,
