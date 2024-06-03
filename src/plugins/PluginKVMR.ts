@@ -123,7 +123,7 @@ export default class PluginKVMR implements IPlugin {
     // setTimeout(function () {
     currentRaidLocation(this.raid_mapLayer);
     // }, 3000);
-    mro_Map.events.register("moveend", W.map, function () {
+    mro_Map.events.register("moveend", W.map, function (e: MouseEvent, d: any) {
       // setTimeout(function () {
       currentRaidLocation(this.raid_mapLayer);
       // }, 1500);
@@ -139,7 +139,10 @@ export default class PluginKVMR implements IPlugin {
     function currentRaidLocation(raid_mapLayer: any): void {
       var mro_Map = W.map;
 
-      const mro_mapLayers = mro_Map.getLayersBy("uniqueName", "__KlangValley");
+      const mro_mapLayers = mro_Map.getLayersBy(
+        "uniqueName",
+        "__KlangValley",
+      )[0];
 
       for (let i = 0; i < mro_mapLayers.features?.length; i++) {
         var raidMapCenter = mro_Map.getCenter();
@@ -147,6 +150,7 @@ export default class PluginKVMR implements IPlugin {
           raidMapCenter.lon,
           raidMapCenter.lat,
         );
+        raid_mapLayer = mro_Map.getLayersBy("uniqueName", "__KlangValley")[0];
         var raidCenterCheck =
           raid_mapLayer.features[i].geometry.components[0].containsPoint(
             raidCenterPoint,
@@ -155,9 +159,8 @@ export default class PluginKVMR implements IPlugin {
 
         if (raidCenterCheck === true) {
           //var str = $('#topbar-container > div > div.location-info-region > div').text();
-          var str = $(
-            "#topbar-container > div > div.topbar > div.location-info-region > div.location-info",
-          ).text();
+          var str =
+            document.getElementsByClassName("#location-info")[0].innerText;
 
           var n2 = str.indexOf(" - ");
 
@@ -178,15 +181,11 @@ export default class PluginKVMR implements IPlugin {
               "Klang Valley MapRaid " +
               raid_mapLayer.features[i].attributes.number +
               " - " +
-              $(
-                "#topbar-container > div > div.topbar > div.location-info-region > div.location-info",
-              ).text();
+              $("#location-info").text();
           }
           //setTimeout(function(){$('#topbar-container > div > div.location-info-region > div').text(raidLocationLabel);},200);
           setTimeout(function () {
-            $(
-              "#topbar-container > div > div.topbar > div.location-info-region > div.location-info",
-            ).text(raidLocationLabel);
+            $("#location-info").text(raidLocationLabel);
           }, 200);
           if (holes === "false") {
             break;

@@ -15,9 +15,32 @@ export default class PluginFactory {
         return new PluginTrafficCameras();
       case "PluginKVMR":
         if (
-          ["junyianl", "EpailXi", "paulkok_my", "CoolCityCat"].includes(
-            WazeWrap.User.Username(),
-          )
+          [
+            "rickylo103",
+            "EpailXi",
+            "lufti_bihar",
+            "DINKAFTAC",
+            "dinohoo",
+            "Inyshen",
+            "RapidGod",
+            "omegahawk",
+            "firman_bakti",
+            "junyianl",
+            "apis_",
+            "izuaniz",
+            "paulkok_my",
+            "CoolCityCat",
+            "Somebal",
+            "james890526",
+            "pamyskywalker",
+            "Hooijack",
+            "zumaidi",
+            "godericbal",
+            "TinyWizard",
+            "bayau72",
+            "jayleongwk",
+            "jessteepy",
+          ].includes(WazeWrap.User.Username())
         ) {
           return new PluginKVMR();
         } else {
