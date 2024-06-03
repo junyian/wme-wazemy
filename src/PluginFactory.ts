@@ -40,6 +40,11 @@ export default class PluginFactory {
             "bayau72",
             "jayleongwk",
             "jessteepy",
+            "kadyus",
+            "beliamuda",
+            "damaultz",
+            "dckj",
+            "kweeheng",
           ].includes(WazeWrap.User.Username())
         ) {
           return new PluginKVMR();
