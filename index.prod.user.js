@@ -1229,7 +1229,7 @@ class PluginKVMR {
         // setTimeout(function () {
         currentRaidLocation(this.raid_mapLayer);
         // }, 3000);
-        mro_Map.events.register("moveend", W.map, function () {
+        mro_Map.events.register("moveend", W.map, function (e, d) {
             // setTimeout(function () {
             currentRaidLocation(this.raid_mapLayer);
             // }, 1500);
@@ -1242,37 +1242,49 @@ class PluginKVMR {
         console.log("PluginKVMR initialized.");
         function currentRaidLocation(raid_mapLayer) {
             var mro_Map = W.map;
-            const mro_mapLayers = mro_Map.getLayersBy("uniqueName", "__KlangValley");
+            const mro_mapLayers = mro_Map.getLayersBy("uniqueName", "__KlangValley")[0];
             for (let i = 0; i < mro_mapLayers.features?.length; i++) {
                 var raidMapCenter = mro_Map.getCenter();
                 var raidCenterPoint = new OpenLayers.Geometry.Point(raidMapCenter.lon, raidMapCenter.lat);
+                raid_mapLayer = mro_Map.getLayersBy("uniqueName", "__KlangValley")[0];
                 var raidCenterCheck = raid_mapLayer.features[i].geometry.components[0].containsPoint(raidCenterPoint);
                 var holes = raid_mapLayer.features[i].attributes.holes;
                 if (raidCenterCheck === true) {
-                    //var str = $('#topbar-container > div > div.location-info-region > div').text();
-                    var str = $("#topbar-container > div > div.topbar > div.location-info-region > div.location-info").text();
-                    var n2 = str.indexOf(" - ");
-                    if (n2 > 0) {
-                        // var n = str.length;
-                        // var res = str.substring(n2 + 2, n);
-                        // var rescount = res.indexOf(" - ");
-                        // if (rescount > 0) {
-                        // var n3 = res.length;
-                        // var res2 = res.substring(rescount + 2, n3);
-                        // }
-                        //				var raidLocationLabel = 'Klang Valley ' + raid_mapLayer.features[i].attributes.number + ' - ' + res2;
-                        var raidLocationLabel = "Klang Valley MapRaid " +
-                            raid_mapLayer.features[i].attributes.number;
+                    var str = $("#topbar-container > div > div.location-info-region > div").text();
+                    const location = str.split(" - ");
+                    if (location.length > 1) {
+                        location[1] =
+                            "Klang Valley MapRaid " +
+                                raid_mapLayer.features[i].attributes.number;
                     }
                     else {
-                        var raidLocationLabel = "Klang Valley MapRaid " +
-                            raid_mapLayer.features[i].attributes.number +
-                            " - " +
-                            $("#topbar-container > div > div.topbar > div.location-info-region > div.location-info").text();
+                        location[0] =
+                            "Klang Valley MapRaid " +
+                                raid_mapLayer.features[i].attributes.number;
                     }
-                    //setTimeout(function(){$('#topbar-container > div > div.location-info-region > div').text(raidLocationLabel);},200);
+                    const raidLocationLabel = location.join(" - ");
+                    // var n2 = str.indexOf(" - ");
+                    // if (n2 > 0) {
+                    // var n = str.length;
+                    // var res = str.substring(n2 + 2, n);
+                    // var rescount = res.indexOf(" - ");
+                    // if (rescount > 0) {
+                    // var n3 = res.length;
+                    // var res2 = res.substring(rescount + 2, n3);
+                    // }
+                    //				var raidLocationLabel = 'Klang Valley ' + raid_mapLayer.features[i].attributes.number + ' - ' + res2;
+                    /*    var raidLocationLabel =
+                         "Klang Valley MapRaid " +
+                         raid_mapLayer.features[i].attributes.number;
+                     } else {
+                       var raidLocationLabel =
+                         "Klang Valley MapRaid " +
+                         raid_mapLayer.features[i].attributes.number +
+                         " - " +
+                         $('#topbar-container > div > div.location-info-region > div').text();
+                     } */
                     setTimeout(function () {
-                        $("#topbar-container > div > div.topbar > div.location-info-region > div.location-info").text(raidLocationLabel);
+                        $("#topbar-container > div > div.location-info-region > div").text(raidLocationLabel);
                     }, 200);
                     if (holes === "false") {
                         break;
@@ -1299,6 +1311,9 @@ class PluginKVMR {
     }
     disable() {
         this.raid_mapLayer.setVisibility(false);
+        const mro_map = W.map;
+        mro_map.events.unregister("moveend", W.map);
+        mro_map.events.unregister("zoomend", W.map);
         console.log("PluginKVMR disabled.");
     }
     updateSettings(settings) {
@@ -1361,7 +1376,37 @@ class PluginFactory {
             case "PluginTrafficCameras":
                 return new PluginTrafficCameras();
             case "PluginKVMR":
-                if (["junyianl", "EpailXi", "paulkok_my", "CoolCityCat"].includes(WazeWrap.User.Username())) {
+                if ([
+                    "rickylo103",
+                    "EpailXi",
+                    "lufti_bihar",
+                    "DINKAFTAC",
+                    "dinohoo",
+                    "Inyshen",
+                    "RapidGod",
+                    "omegahawk",
+                    "firman_bakti",
+                    "junyianl",
+                    "apis_",
+                    "izuaniz",
+                    "paulkok_my",
+                    "CoolCityCat",
+                    "Somebal",
+                    "james890526",
+                    "pamyskywalker",
+                    "Hooijack",
+                    "zumaidi",
+                    "godericbal",
+                    "TinyWizard",
+                    "bayau72",
+                    "jayleongwk",
+                    "jessteepy",
+                    "kadyus",
+                    "beliamuda",
+                    "damaultz",
+                    "dckj",
+                    "kweeheng",
+                ].includes(WazeWrap.User.Username())) {
                     return new PluginKVMR();
                 }
                 else {
