@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name        WME WazeMY
 // @namespace   https://www.github.com/junyian/
-// @version     2024.06.03.01
+// @version     2024.06.03.02
 // @author      junyianl <junyian@gmail.com>
 // @source      https://github.com/junyian/wme-wazemy
 // @license     MIT
@@ -1219,34 +1219,34 @@ class PluginKVMR {
             displayInLayerSwitcher: true,
             uniqueName: "__KlangValley",
         });
-        // I18n.translations.en.layers.name["__KlangValley"] = " ";
         mro_Map.addLayer(this.raid_mapLayer);
         this.areas.forEach((area) => {
             const geometry = parseWKT(area.geometry);
             this.addRaidPolygon(this.raid_mapLayer, geometry, area.color, area.name);
         });
-        this.raid_mapLayer.setVisibility(true);
-        // setTimeout(function () {
-        currentRaidLocation(this.raid_mapLayer);
-        // }, 3000);
-        mro_Map.events.register("moveend", W.map, function (e, d) {
-            // setTimeout(function () {
-            currentRaidLocation(this.raid_mapLayer);
-            // }, 1500);
+        mro_Map.events.register("moveend", W.map, function () {
+            currentRaidLocation();
         });
         mro_Map.events.register("zoomend", W.map, function () {
-            // setTimeout(function () {
-            currentRaidLocation(this.raid_mapLayer);
-            // }, 1500);
+            currentRaidLocation();
         });
         console.log("PluginKVMR initialized.");
-        function currentRaidLocation(raid_mapLayer) {
+        /**
+         * Updates the current raid location on the map based on the user's current location.
+         *
+         * @return {void} This function does not return anything.
+         */
+        function currentRaidLocation() {
+            // Only run if the plugin is enabled. Workaround because unregistering events doesn't work.
+            if ($("#wazemySettings_kvmr_enable").is(":checked") === false) {
+                return;
+            }
             var mro_Map = W.map;
             const mro_mapLayers = mro_Map.getLayersBy("uniqueName", "__KlangValley")[0];
             for (let i = 0; i < mro_mapLayers.features?.length; i++) {
                 var raidMapCenter = mro_Map.getCenter();
                 var raidCenterPoint = new OpenLayers.Geometry.Point(raidMapCenter.lon, raidMapCenter.lat);
-                raid_mapLayer = mro_Map.getLayersBy("uniqueName", "__KlangValley")[0];
+                const raid_mapLayer = mro_Map.getLayersBy("uniqueName", "__KlangValley")[0];
                 var raidCenterCheck = raid_mapLayer.features[i].geometry.components[0].containsPoint(raidCenterPoint);
                 var holes = raid_mapLayer.features[i].attributes.holes;
                 if (raidCenterCheck === true) {
@@ -1258,31 +1258,10 @@ class PluginKVMR {
                                 raid_mapLayer.features[i].attributes.number;
                     }
                     else {
-                        location[0] =
-                            "Klang Valley MapRaid " +
-                                raid_mapLayer.features[i].attributes.number;
+                        location.push("Klang Valley MapRaid " +
+                            raid_mapLayer.features[i].attributes.number);
                     }
                     const raidLocationLabel = location.join(" - ");
-                    // var n2 = str.indexOf(" - ");
-                    // if (n2 > 0) {
-                    // var n = str.length;
-                    // var res = str.substring(n2 + 2, n);
-                    // var rescount = res.indexOf(" - ");
-                    // if (rescount > 0) {
-                    // var n3 = res.length;
-                    // var res2 = res.substring(rescount + 2, n3);
-                    // }
-                    //				var raidLocationLabel = 'Klang Valley ' + raid_mapLayer.features[i].attributes.number + ' - ' + res2;
-                    /*    var raidLocationLabel =
-                         "Klang Valley MapRaid " +
-                         raid_mapLayer.features[i].attributes.number;
-                     } else {
-                       var raidLocationLabel =
-                         "Klang Valley MapRaid " +
-                         raid_mapLayer.features[i].attributes.number +
-                         " - " +
-                         $('#topbar-container > div > div.location-info-region > div').text();
-                     } */
                     setTimeout(function () {
                         $("#topbar-container > div > div.location-info-region > div").text(raidLocationLabel);
                     }, 200);
