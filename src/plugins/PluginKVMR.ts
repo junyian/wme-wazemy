@@ -111,27 +111,18 @@ export default class PluginKVMR implements IPlugin {
       uniqueName: "__KlangValley",
     });
 
-    // I18n.translations.en.layers.name["__KlangValley"] = " ";
     mro_Map.addLayer(this.raid_mapLayer);
 
     this.areas.forEach((area) => {
       const geometry = parseWKT(area.geometry);
       this.addRaidPolygon(this.raid_mapLayer, geometry, area.color, area.name);
     });
-    this.raid_mapLayer.setVisibility(true);
 
-    // setTimeout(function () {
-    currentRaidLocation(this.raid_mapLayer);
-    // }, 3000);
-    mro_Map.events.register("moveend", W.map, function (e: MouseEvent, d: any) {
-      // setTimeout(function () {
-      currentRaidLocation(this.raid_mapLayer);
-      // }, 1500);
+    mro_Map.events.register("moveend", W.map, function () {
+      currentRaidLocation();
     });
     mro_Map.events.register("zoomend", W.map, function () {
-      // setTimeout(function () {
-      currentRaidLocation(this.raid_mapLayer);
-      // }, 1500);
+      currentRaidLocation();
     });
 
     console.log("PluginKVMR initialized.");
@@ -139,10 +130,14 @@ export default class PluginKVMR implements IPlugin {
     /**
      * Updates the current raid location on the map based on the user's current location.
      *
-     * @param {any} raid_mapLayer - The map layer containing the raid information.
      * @return {void} This function does not return anything.
      */
-    function currentRaidLocation(raid_mapLayer: any): void {
+    function currentRaidLocation(): void {
+      // Only run if the plugin is enabled. Workaround because unregistering events doesn't work.
+      if ($("#wazemySettings_kvmr_enable").is(":checked") === false) {
+        return;
+      }
+
       var mro_Map = W.map;
 
       const mro_mapLayers = mro_Map.getLayersBy(
@@ -156,7 +151,10 @@ export default class PluginKVMR implements IPlugin {
           raidMapCenter.lon,
           raidMapCenter.lat,
         );
-        raid_mapLayer = mro_Map.getLayersBy("uniqueName", "__KlangValley")[0];
+        const raid_mapLayer = mro_Map.getLayersBy(
+          "uniqueName",
+          "__KlangValley",
+        )[0];
         var raidCenterCheck =
           raid_mapLayer.features[i].geometry.components[0].containsPoint(
             raidCenterPoint,
