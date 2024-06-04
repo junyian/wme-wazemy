@@ -42,6 +42,8 @@ interface W {
   map: any;
 }
 
+interface DataModelObject {}
+
 interface Interface {
   ShowScriptUpdate(
     scriptName: string,
