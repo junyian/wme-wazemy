@@ -1,18 +1,15 @@
 import "./style/main.less";
 import PluginManager from "./PluginManager";
 
-const updateMessage = `Complete rewrite of the WazeMY script to TypeScript.<br>
+const updateMessage = `Complete rewrite of the WazeMY script to TypeScript.<br><br>
   Bugfixes:<br>
   <ul>
     <li>Tooltip is not removed when feature is disabled via settings.</li>
+    <li>Zoom Pic didn't work on RPP images.</li>
   </ul>
   Improvements:<br>
   <ul>
     <li>Modernized the copy of lat/lon method.</li>
-  </ul>
-  Todo:<br>
-  <ul>
-    <li>Picture zoom in.</li>
   </ul>`;
 async function main() {
   console.log("[WazeMY] Script started");
@@ -55,6 +52,7 @@ async function initializeWazeMY() {
   pluginManager.addPlugin("tooltip", "PluginTooltip");
   pluginManager.addPlugin("trafcam", "PluginTrafficCameras");
   pluginManager.addPlugin("kvmr", "PluginKVMR");
+  pluginManager.addPlugin("zoompic", "PluginZoomPic");
 }
 
 main().catch((e) => {
