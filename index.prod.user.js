@@ -1340,7 +1340,60 @@ class PluginKVMR {
     }
 }
 
+;// CONCATENATED MODULE: ./src/plugins/PluginZoomPic.ts
+class PluginZoomPic {
+    constructor() {
+        this.initialize();
+    }
+    /**
+     * Initialize plugin.
+     *
+     * @return {void} This function does not return anything.
+     */
+    initialize() {
+        $(document.body).on("click", () => {
+            const img = $("div.modal-dialog.venue-image-dialog > div > div.modal-body > img");
+            if (img.length > 0) {
+                const newImg = img[0];
+                const links = $("div.modal-dialog.venue-image-dialog > div > div.modal-header > a");
+                for (let i = 0; i < links.length; i++) {
+                    links[i].remove();
+                }
+                const newImgHTML = `<a href="${newImg.src.replace("thumbs/thumb700_", "")}" target="_blank">(+)</a>`;
+                $("div.modal-dialog.venue-image-dialog > div > div.modal-header").append(newImgHTML);
+            }
+            $("div.modal-dialog.venue-image-dialog");
+        });
+        console.log("[WazeMY] PluginZoomPic initialized.");
+    }
+    /**
+     * Enable plugin.
+     *
+     * @return {void} This function does not return anything.
+     */
+    enable() {
+        console.log("[WazeMY] PluginZoomPic enabled.");
+    }
+    /**
+     * Disable plugin.
+     *
+     * @return {void} This function does not return anything.
+     */
+    disable() {
+        console.log("[WazeMY] PluginZoomPic disabled.");
+    }
+    /**
+     * Updates the settings of the PluginZoomPic based on the provided settings object.
+     *
+     * @return {void} This function does not return anything.
+     */
+    updateSettings(settings) {
+        console.log("[WazeMY] PluginZoomPic settings updated.", settings);
+    }
+}
+
 ;// CONCATENATED MODULE: ./src/PluginFactory.ts
+
 
 
 
@@ -1392,6 +1445,8 @@ class PluginFactory {
                     console.log(`Plugin not created: ${pluginName}`);
                     return null;
                 }
+            case "PluginZoomPic":
+                return new PluginZoomPic();
             default:
                 throw new Error(`Unknown plugin: ${pluginName}`);
         }
@@ -1474,18 +1529,15 @@ PluginManager.instance = new PluginManager(SettingsStorage.instance);
 ;// CONCATENATED MODULE: ./src/index.ts
 
 
-const updateMessage = `Complete rewrite of the WazeMY script to TypeScript.<br>
+const updateMessage = `Complete rewrite of the WazeMY script to TypeScript.<br><br>
   Bugfixes:<br>
   <ul>
     <li>Tooltip is not removed when feature is disabled via settings.</li>
+    <li>Zoom Pic didn't work on RPP images.</li>
   </ul>
   Improvements:<br>
   <ul>
     <li>Modernized the copy of lat/lon method.</li>
-  </ul>
-  Todo:<br>
-  <ul>
-    <li>Picture zoom in.</li>
   </ul>`;
 async function src_main() {
     console.log("[WazeMY] Script started");
@@ -1517,6 +1569,7 @@ async function initializeWazeMY() {
     pluginManager.addPlugin("tooltip", "PluginTooltip");
     pluginManager.addPlugin("trafcam", "PluginTrafficCameras");
     pluginManager.addPlugin("kvmr", "PluginKVMR");
+    pluginManager.addPlugin("zoompic", "PluginZoomPic");
 }
 src_main().catch((e) => {
     console.log(e);
