@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name        WME WazeMY
 // @namespace   https://www.github.com/junyian/
-// @version     2024.06.12.01
+// @version     2024.06.12.02
 // @author      junyianl <junyian@gmail.com>
 // @source      https://github.com/junyian/wme-wazemy
 // @license     MIT
@@ -65,6 +65,9 @@ ___CSS_LOADER_EXPORT___.push([module.id, `.wazemySettings {
   left: 0px;
   visibility: hidden;
   z-index: 10000;
+}
+#wazemyPlaces_table {
+  overflow-x: scroll;
 }
 #wazemyPlaces_venues {
   width: 95%;
@@ -1449,15 +1452,21 @@ class PluginPlaces {
     <div id="wazemyPlaces">
       <select name="wazemyPlaces_polygons" id="wazemyPlaces_polygons"></select>
       <button id="wazemyPlaces_scan">Scan</button>
+      <div id="wazemyPlaces_purCount"></div>
+      <div id="wazemyPlaces_totalCount"></div>
+      <div id="wazemyPlaces_table">
       <table id="wazemyPlaces_venues">
         <thead>
           <tr>
+            <th>PUR</th>
+            <th>L</th>
             <th>Name</th>
             <th>Errors</th>
           </tr>
         </thead>
         <tbody></tbody>
       </table>
+      </div>
     </div>`;
         // Populate select options with polygons from KVMR.
         const map = W.map.getLayersBy("uniqueName", "__KlangValley");
@@ -1484,13 +1493,14 @@ class PluginPlaces {
                         headers: {},
                         url: url,
                         onload: function (response) {
-                            console.log("onload");
-                            console.log(response.response.venues.objects);
                             $("#wazemyPlaces_venues > tbody").empty();
+                            let purCount = 0;
+                            let totalCount = 0;
                             response.response.venues.objects.forEach((venue) => {
                                 // Check venue against rules.
                                 const status = evaluateVenue(venue);
-                                if (status.priority > 0) {
+                                const isPUR = checkPURstatus(venue);
+                                if (status.priority > 0 || isPUR) {
                                     // Add venue to table.
                                     let lon = 0;
                                     let lat = 0;
@@ -1509,11 +1519,45 @@ class PluginPlaces {
                                         const xy = OpenLayers.Layer.SphericalMercator.forwardMercator(parseFloat(target[0]), parseFloat(target[1]));
                                         W.map.setCenter(xy);
                                     });
+                                    let purHTML = ``;
+                                    if (isPUR) {
+                                        purCount++;
+                                        if (venue.approved === false) {
+                                            purHTML = `<td align="center">N</td>`;
+                                        }
+                                        else if (venue.venueUpdateRequests[0].type === "REQUEST") {
+                                            if (venue.venueUpdateRequests[0].subType === "FLAG") {
+                                                purHTML = `<td align="center">F</td>`;
+                                            }
+                                            else if (venue.venueUpdateRequests[0].subType === "UPDATE") {
+                                                purHTML = `<td align="center">U</td>`;
+                                            }
+                                            else if (venue.venueUpdateRequests[0].subType === "DELETE") {
+                                                purHTML = `<td align="center">D</td>`;
+                                            }
+                                            else {
+                                                purHTML = `<td align="center">+</td>`;
+                                            }
+                                        }
+                                        else if (venue.venueUpdateRequests[0].type === "IMAGE") {
+                                            purHTML = `<td align="center">I</td>`;
+                                        }
+                                        else {
+                                            purHTML = `<td align="center">+</td>`;
+                                        }
+                                    }
+                                    else {
+                                        purHTML = `<td></td>`;
+                                    }
+                                    row.append(purHTML);
+                                    const levelHTML = `<td>${venue.lockRank ? venue.lockRank + 1 : 1}</td>`;
+                                    row.append(levelHTML);
                                     const colHTML = `<td>${venue.name}</td>`;
                                     row.append(colHTML);
                                     const errorsHTML = `<td>${status.errors.join("\r\n")}</td>`;
                                     row.append(errorsHTML);
                                     $("#wazemyPlaces_venues > tbody").append(row);
+                                    totalCount++;
                                 }
                                 function evaluateVenue(venue) {
                                     let status = {
@@ -1526,7 +1570,17 @@ class PluginPlaces {
                                     }
                                     return status;
                                 }
+                                function checkPURstatus(venue) {
+                                    if (venue.venueUpdateRequests?.length > 0) {
+                                        return true;
+                                    }
+                                    else {
+                                        return false;
+                                    }
+                                }
                             });
+                            $("#wazemyPlaces_purCount").text(`# PUR = ${purCount}`);
+                            $("#wazemyPlaces_totalCount").text(`# total = ${totalCount}`);
                         },
                         onerror: function (response) {
                             console.log("onerror");
