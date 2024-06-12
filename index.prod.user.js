@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name        WME WazeMY
 // @namespace   https://www.github.com/junyian/
-// @version     2024.06.03.02
+// @version     2024.06.12.01
 // @author      junyianl <junyian@gmail.com>
 // @source      https://github.com/junyian/wme-wazemy
 // @license     MIT
@@ -65,6 +65,17 @@ ___CSS_LOADER_EXPORT___.push([module.id, `.wazemySettings {
   left: 0px;
   visibility: hidden;
   z-index: 10000;
+}
+#wazemyPlaces_venues {
+  width: 95%;
+  border: 1px solid;
+}
+#wazemyPlaces_venues th {
+  border: 1px solid;
+  background-color: #ccc;
+}
+#wazemyPlaces_venues td {
+  border: 1px solid;
 }
 `, ""]);
 // Exports
@@ -1392,7 +1403,172 @@ class PluginZoomPic {
     }
 }
 
+;// CONCATENATED MODULE: ./src/plugins/PluginPlaces.ts
+
+
+class PluginPlaces {
+    constructor() {
+        this.initialize();
+    }
+    /**
+     * Initialize plugin.
+     *
+     * @return {void} This function does not return anything.
+     */
+    initialize() {
+        const settingsHTML = `<input type="checkbox" id="wazemySettings_places_enable"/>
+<label for="wazemySettings_places_enable">Enable Places</label>`;
+        $("#wazemySettings_settings").append(settingsHTML);
+        $("#wazemySettings_places_enable").on("change", () => {
+            PluginManager.instance.updatePluginSettings("places", {
+                enable: $("#wazemySettings_places_enable").prop("checked"),
+            });
+        });
+        // Set settings according to last stored value.
+        const savedSettings = SettingsStorage.instance.getSetting("places");
+        if (savedSettings?.enable === true) {
+            $("#wazemySettings_places_enable").prop("checked", true);
+        }
+        else {
+            $("#wazemySettings_places_enable").prop("checked", false);
+        }
+        console.log("[WazeMY] PluginPlaces initialized.");
+    }
+    /**
+     * Enable plugin.
+     *
+     * @return {void} This function does not return anything.
+     */
+    enable() {
+        const { tabLabel, tabPane } = W.userscripts.registerSidebarTab("wazemyplaces");
+        tabLabel.innerHTML = "WazeMY Places";
+        tabLabel.title = "WazeMY Places";
+        tabPane.innerHTML = `<div>
+      <h4>WazeMY Places</h4>
+    </div>
+    <div id="wazemyPlaces">
+      <select name="wazemyPlaces_polygons" id="wazemyPlaces_polygons"></select>
+      <button id="wazemyPlaces_scan">Scan</button>
+      <table id="wazemyPlaces_venues">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Errors</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>`;
+        // Populate select options with polygons from KVMR.
+        const map = W.map.getLayersBy("uniqueName", "__KlangValley");
+        map[0].features.forEach((feature) => {
+            $("#wazemyPlaces_polygons").append($("<option>", {
+                value: feature.data.number,
+                text: feature.data.number,
+            }));
+        });
+        // Handle Scan button.
+        $("#wazemyPlaces_scan").on("click", () => {
+            const map = W.map.getLayersBy("uniqueName", "__KlangValley");
+            map[0].features.forEach((feature) => {
+                if (feature.data.number ===
+                    $("#wazemyPlaces_polygons option:selected")[0].innerText) {
+                    // Send request to Descartes for all venues within bounding box.
+                    const bounds = feature.geometry
+                        .getBounds()
+                        .transform(W.map.getProjectionObject(), "EPSG:4326");
+                    const url = `https://www.waze.com/row-Descartes/app/Features?bbox=${bounds.left}%2C${bounds.bottom}%2C${bounds.right}%2C${bounds.top}&venueLevel=4&venueFilter=1%2C1%2C1%2C1`;
+                    GM_xmlhttpRequest({
+                        method: "GET",
+                        responseType: "json",
+                        headers: {},
+                        url: url,
+                        onload: function (response) {
+                            console.log("onload");
+                            console.log(response.response.venues.objects);
+                            $("#wazemyPlaces_venues > tbody").empty();
+                            response.response.venues.objects.forEach((venue) => {
+                                // Check venue against rules.
+                                const status = evaluateVenue(venue);
+                                if (status.priority > 0) {
+                                    // Add venue to table.
+                                    let lon = 0;
+                                    let lat = 0;
+                                    if (venue.geometry.type === "Polygon") {
+                                        lon = venue.geometry.coordinates[0][0][0];
+                                        lat = venue.geometry.coordinates[0][0][1];
+                                    }
+                                    else {
+                                        lon = venue.geometry.coordinates[0];
+                                        lat = venue.geometry.coordinates[1];
+                                    }
+                                    const row = $("<tr>");
+                                    row.attr("id", `${lon}:${lat}:${venue.id}`);
+                                    row.on("click", (e) => {
+                                        const target = e.currentTarget.id.split(":"); // split to lon:lat:id
+                                        const xy = OpenLayers.Layer.SphericalMercator.forwardMercator(parseFloat(target[0]), parseFloat(target[1]));
+                                        W.map.setCenter(xy);
+                                    });
+                                    const colHTML = `<td>${venue.name}</td>`;
+                                    row.append(colHTML);
+                                    const errorsHTML = `<td>${status.errors.join("\r\n")}</td>`;
+                                    row.append(errorsHTML);
+                                    $("#wazemyPlaces_venues > tbody").append(row);
+                                }
+                                function evaluateVenue(venue) {
+                                    let status = {
+                                        priority: 0,
+                                        errors: [],
+                                    };
+                                    if (typeof venue.name == "undefined") {
+                                        status.priority = 3;
+                                        status.errors.push("Name is not defined.");
+                                    }
+                                    return status;
+                                }
+                            });
+                        },
+                        onerror: function (response) {
+                            console.log("onerror");
+                        },
+                        onprogress: function (response) {
+                            console.log("onprogress");
+                        },
+                    });
+                }
+            });
+        });
+        console.log("[WazeMY] PluginPlaces enabled.");
+    }
+    /**
+     * Disable plugin.
+     *
+     * @return {void} This function does not return anything.
+     */
+    disable() {
+        if ($("span[title='WazeMY Places']").length > 0) {
+            W.userscripts.removeSidebarTab("wazemyplaces");
+        }
+        console.log("[WazeMY] PluginPlaces disabled.");
+    }
+    /**
+     * Updates the settings of the PluginPlaces based on the provided settings object.
+     *
+     * @return {void} This function does not return anything.
+     */
+    updateSettings(settings) {
+        if (settings.enable === true) {
+            this.enable();
+        }
+        else {
+            this.disable();
+        }
+        console.log("[WazeMY] PluginPlaces settings updated.", settings);
+    }
+}
+
 ;// CONCATENATED MODULE: ./src/PluginFactory.ts
+
 
 
 
@@ -1447,6 +1623,8 @@ class PluginFactory {
                 }
             case "PluginZoomPic":
                 return new PluginZoomPic();
+            case "PluginPlaces":
+                return new PluginPlaces();
             default:
                 throw new Error(`Unknown plugin: ${pluginName}`);
         }
@@ -1529,16 +1707,7 @@ PluginManager.instance = new PluginManager(SettingsStorage.instance);
 ;// CONCATENATED MODULE: ./src/index.ts
 
 
-const updateMessage = `Complete rewrite of the WazeMY script to TypeScript.<br><br>
-  Bugfixes:<br>
-  <ul>
-    <li>Tooltip is not removed when feature is disabled via settings.</li>
-    <li>Zoom Pic didn't work on RPP images.</li>
-  </ul>
-  Improvements:<br>
-  <ul>
-    <li>Modernized the copy of lat/lon method.</li>
-  </ul>`;
+const updateMessage = `Initial commit of PluginPlaces.`;
 async function src_main() {
     console.log("[WazeMY] Script started");
     document.addEventListener("wme-ready", initializeWazeMY, { once: true });
@@ -1570,6 +1739,7 @@ async function initializeWazeMY() {
     pluginManager.addPlugin("trafcam", "PluginTrafficCameras");
     pluginManager.addPlugin("kvmr", "PluginKVMR");
     pluginManager.addPlugin("zoompic", "PluginZoomPic");
+    pluginManager.addPlugin("places", "PluginPlaces");
 }
 src_main().catch((e) => {
     console.log(e);
