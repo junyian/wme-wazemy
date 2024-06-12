@@ -1,7 +1,7 @@
 {
   "name": "wme-wazemy",
   "description": "Tampermonkey script for Waze map editing in Malaysia",
-  "version": "2024.06.12.02",
+  "version": "2024.06.12.03",
   "author": {
     "name": "junyianl",
     "email": "junyian@gmail.com"
