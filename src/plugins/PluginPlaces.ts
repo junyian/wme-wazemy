@@ -49,15 +49,21 @@ export default class PluginPlaces implements IPlugin {
     <div id="wazemyPlaces">
       <select name="wazemyPlaces_polygons" id="wazemyPlaces_polygons"></select>
       <button id="wazemyPlaces_scan">Scan</button>
+      <div id="wazemyPlaces_purCount"></div>
+      <div id="wazemyPlaces_totalCount"></div>
+      <div id="wazemyPlaces_table">
       <table id="wazemyPlaces_venues">
         <thead>
           <tr>
+            <th>PUR</th>
+            <th>L</th>
             <th>Name</th>
             <th>Errors</th>
           </tr>
         </thead>
         <tbody></tbody>
       </table>
+      </div>
     </div>`;
 
     // Populate select options with polygons from KVMR.
@@ -90,13 +96,14 @@ export default class PluginPlaces implements IPlugin {
             headers: {},
             url: url,
             onload: function (response) {
-              console.log("onload");
-              console.log(response.response.venues.objects);
               $("#wazemyPlaces_venues > tbody").empty();
+              let purCount = 0;
+              let totalCount = 0;
               response.response.venues.objects.forEach((venue: any) => {
                 // Check venue against rules.
                 const status = evaluateVenue(venue);
-                if (status.priority > 0) {
+                const isPUR: boolean = checkPURstatus(venue);
+                if (status.priority > 0 || isPUR) {
                   // Add venue to table.
                   let lon = 0;
                   let lat = 0;
@@ -118,11 +125,49 @@ export default class PluginPlaces implements IPlugin {
                       );
                     W.map.setCenter(xy);
                   });
+
+                  let purHTML = ``;
+                  if (isPUR) {
+                    purCount++;
+                    if (venue.approved === false) {
+                      purHTML = `<td align="center">N</td>`;
+                    } else if (
+                      venue.venueUpdateRequests[0].type === "REQUEST"
+                    ) {
+                      if (venue.venueUpdateRequests[0].subType === "FLAG") {
+                        purHTML = `<td align="center">F</td>`;
+                      } else if (
+                        venue.venueUpdateRequests[0].subType === "UPDATE"
+                      ) {
+                        purHTML = `<td align="center">U</td>`;
+                      } else if (
+                        venue.venueUpdateRequests[0].subType === "DELETE"
+                      ) {
+                        purHTML = `<td align="center">D</td>`;
+                      } else {
+                        purHTML = `<td align="center">+</td>`;
+                      }
+                    } else if (venue.venueUpdateRequests[0].type === "IMAGE") {
+                      purHTML = `<td align="center">I</td>`;
+                    } else {
+                      purHTML = `<td align="center">+</td>`;
+                    }
+                  } else {
+                    purHTML = `<td></td>`;
+                  }
+                  row.append(purHTML);
+
+                  const levelHTML = `<td>${venue.lockRank ? venue.lockRank + 1 : 1}</td>`;
+                  row.append(levelHTML);
+
                   const colHTML = `<td>${venue.name}</td>`;
                   row.append(colHTML);
+
                   const errorsHTML = `<td>${status.errors.join("\r\n")}</td>`;
                   row.append(errorsHTML);
+
                   $("#wazemyPlaces_venues > tbody").append(row);
+                  totalCount++;
                 }
 
                 function evaluateVenue(venue: any): any {
@@ -136,7 +181,17 @@ export default class PluginPlaces implements IPlugin {
                   }
                   return status;
                 }
+
+                function checkPURstatus(venue: any): boolean {
+                  if (venue.venueUpdateRequests?.length > 0) {
+                    return true;
+                  } else {
+                    return false;
+                  }
+                }
               });
+              $("#wazemyPlaces_purCount").text(`# PUR = ${purCount}`);
+              $("#wazemyPlaces_totalCount").text(`# total = ${totalCount}`);
             },
             onerror: function (response) {
               console.log("onerror");
