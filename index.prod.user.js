@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name        WME WazeMY
 // @namespace   https://www.github.com/junyian/
-// @version     2024.06.12.02
+// @version     2024.06.12.03
 // @author      junyianl <junyian@gmail.com>
 // @source      https://github.com/junyian/wme-wazemy
 // @license     MIT
@@ -1411,6 +1411,28 @@ class PluginZoomPic {
 
 class PluginPlaces {
     constructor() {
+        this.tabHTML = `
+    <div><h4>WazeMY Places</h4></div>
+    <div id="wazemyPlaces">
+      <select name="wazemyPlaces_polygons" id="wazemyPlaces_polygons"></select>
+      <button id="wazemyPlaces_scan">Scan</button>
+      <div id="wazemyPlaces_purCount"></div>
+      <div id="wazemyPlaces_totalCount"></div>
+      <div id="wazemyPlaces_table">
+      <table id="wazemyPlaces_venues">
+        <thead>
+          <tr>
+            <th>PUR</th>
+            <th>L</th>
+            <th>Name</th>
+            <th>Errors</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+      </div>
+    </div>
+  `;
         this.initialize();
     }
     /**
@@ -1420,7 +1442,7 @@ class PluginPlaces {
      */
     initialize() {
         const settingsHTML = `<input type="checkbox" id="wazemySettings_places_enable"/>
-<label for="wazemySettings_places_enable">Enable Places</label>`;
+      <label for="wazemySettings_places_enable">Enable Places</label>`;
         $("#wazemySettings_settings").append(settingsHTML);
         $("#wazemySettings_places_enable").on("change", () => {
             PluginManager.instance.updatePluginSettings("places", {
@@ -1446,28 +1468,7 @@ class PluginPlaces {
         const { tabLabel, tabPane } = W.userscripts.registerSidebarTab("wazemyplaces");
         tabLabel.innerHTML = "WazeMY Places";
         tabLabel.title = "WazeMY Places";
-        tabPane.innerHTML = `<div>
-      <h4>WazeMY Places</h4>
-    </div>
-    <div id="wazemyPlaces">
-      <select name="wazemyPlaces_polygons" id="wazemyPlaces_polygons"></select>
-      <button id="wazemyPlaces_scan">Scan</button>
-      <div id="wazemyPlaces_purCount"></div>
-      <div id="wazemyPlaces_totalCount"></div>
-      <div id="wazemyPlaces_table">
-      <table id="wazemyPlaces_venues">
-        <thead>
-          <tr>
-            <th>PUR</th>
-            <th>L</th>
-            <th>Name</th>
-            <th>Errors</th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-      </div>
-    </div>`;
+        tabPane.innerHTML = this.tabHTML;
         // Populate select options with polygons from KVMR.
         const map = W.map.getLayersBy("uniqueName", "__KlangValley");
         map[0].features.forEach((feature) => {
@@ -1483,9 +1484,8 @@ class PluginPlaces {
                 if (feature.data.number ===
                     $("#wazemyPlaces_polygons option:selected")[0].innerText) {
                     // Send request to Descartes for all venues within bounding box.
-                    const bounds = feature.geometry
-                        .getBounds()
-                        .transform(W.map.getProjectionObject(), "EPSG:4326");
+                    let bounds = feature.geometry.getBounds().clone();
+                    bounds = bounds.transform(W.map.getProjectionObject(), "EPSG:4326");
                     const url = `https://www.waze.com/row-Descartes/app/Features?bbox=${bounds.left}%2C${bounds.bottom}%2C${bounds.right}%2C${bounds.top}&venueLevel=4&venueFilter=1%2C1%2C1%2C1`;
                     GM_xmlhttpRequest({
                         method: "GET",
