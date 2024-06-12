@@ -53,6 +53,7 @@ async function initializeWazeMY() {
   pluginManager.addPlugin("trafcam", "PluginTrafficCameras");
   pluginManager.addPlugin("kvmr", "PluginKVMR");
   pluginManager.addPlugin("zoompic", "PluginZoomPic");
+  pluginManager.addPlugin("places", "PluginPlaces");
 }
 
 main().catch((e) => {
