@@ -1,7 +1,8 @@
 import "./style/main.less";
 import PluginManager from "./PluginManager";
 
-const updateMessage = `Initial commit of PluginPlaces.`;
+const updateMessage = `PluginPlaces: Tile-based PUR scanning.`;
+
 async function main() {
   console.log("[WazeMY] Script started");
   document.addEventListener("wme-ready", initializeWazeMY, { once: true });

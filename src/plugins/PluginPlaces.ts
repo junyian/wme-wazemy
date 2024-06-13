@@ -8,13 +8,14 @@ export default class PluginPlaces implements IPlugin {
     <div id="wazemyPlaces">
       <select name="wazemyPlaces_polygons" id="wazemyPlaces_polygons"></select>
       <button id="wazemyPlaces_scan">Scan</button>
+      <div id="wazemyPlaces_scanStatus"></div>
       <div id="wazemyPlaces_purCount"></div>
       <div id="wazemyPlaces_totalCount"></div>
       <div id="wazemyPlaces_table">
       <table id="wazemyPlaces_venues">
         <thead>
           <tr>
-            <th>PUR</th>
+            <th title="I=Image\nN=New Place\nU=Update\nF=Flag\nD=Delete">PUR</th>
             <th>L</th>
             <th>Name</th>
             <th>Errors</th>
@@ -80,129 +81,152 @@ export default class PluginPlaces implements IPlugin {
     });
 
     // Handle Scan button.
-    $("#wazemyPlaces_scan").on("click", () => {
+    $("#wazemyPlaces_scan").on("click", async () => {
+      $("#wazemyPlaces_scanStatus").text("Scanning tiles.");
       const map = W.map.getLayersBy("uniqueName", "__KlangValley");
-      map[0].features.forEach((feature: any) => {
-        if (
-          feature.data.number ===
-          $("#wazemyPlaces_polygons option:selected")[0].innerText
-        ) {
-          // Send request to Descartes for all venues within bounding box.
-          let bounds = feature.geometry.getBounds().clone();
-          bounds = bounds.transform(W.map.getProjectionObject(), "EPSG:4326");
-          const url = `https://www.waze.com/row-Descartes/app/Features?bbox=${bounds.left}%2C${bounds.bottom}%2C${bounds.right}%2C${bounds.top}&venueLevel=4&venueFilter=1%2C1%2C1%2C1`;
-          GM_xmlhttpRequest({
-            method: "GET",
-            responseType: "json",
-            headers: {},
-            url: url,
-            onload: function (response) {
-              $("#wazemyPlaces_venues > tbody").empty();
-              let purCount = 0;
-              let totalCount = 0;
-              response.response.venues.objects.forEach((venue: any) => {
-                // Check venue against rules.
-                const status = evaluateVenue(venue);
-                const isPUR: boolean = checkPURstatus(venue);
-                if (status.priority > 0 || isPUR) {
-                  // Add venue to table.
-                  let lon = 0;
-                  let lat = 0;
-                  if (venue.geometry.type === "Polygon") {
-                    lon = venue.geometry.coordinates[0][0][0];
-                    lat = venue.geometry.coordinates[0][0][1];
-                  } else {
-                    lon = venue.geometry.coordinates[0];
-                    lat = venue.geometry.coordinates[1];
-                  }
-                  const row = $("<tr>");
-                  row.attr("id", `${lon}:${lat}:${venue.id}`);
-                  row.on("click", (e) => {
-                    const target = e.currentTarget.id.split(":"); // split to lon:lat:id
-                    const xy =
-                      OpenLayers.Layer.SphericalMercator.forwardMercator(
-                        parseFloat(target[0]),
-                        parseFloat(target[1]),
-                      );
-                    W.map.setCenter(xy);
-                  });
+      if (map.length === 0) {
+        console.log("[PluginPlaces] No KVMR layer found. Aborting scan.");
+        return false;
+      }
+      const mr = map[0].getFeaturesByAttribute(
+        "number",
+        $("#wazemyPlaces_polygons option:selected")[0].innerText,
+      );
+      if (mr.length === 0) {
+        console.log("[PluginPlaces] No polygon found. Aborting scan.");
+        return false;
+      }
 
-                  let purHTML = ``;
-                  if (isPUR) {
-                    purCount++;
-                    if (venue.approved === false) {
-                      purHTML = `<td align="center">N</td>`;
-                    } else if (
-                      venue.venueUpdateRequests[0].type === "REQUEST"
-                    ) {
-                      if (venue.venueUpdateRequests[0].subType === "FLAG") {
-                        purHTML = `<td align="center">F</td>`;
-                      } else if (
-                        venue.venueUpdateRequests[0].subType === "UPDATE"
-                      ) {
-                        purHTML = `<td align="center">U</td>`;
-                      } else if (
-                        venue.venueUpdateRequests[0].subType === "DELETE"
-                      ) {
-                        purHTML = `<td align="center">D</td>`;
-                      } else {
-                        purHTML = `<td align="center">+</td>`;
-                      }
-                    } else if (venue.venueUpdateRequests[0].type === "IMAGE") {
-                      purHTML = `<td align="center">I</td>`;
-                    } else {
-                      purHTML = `<td align="center">+</td>`;
-                    }
-                  } else {
-                    purHTML = `<td></td>`;
-                  }
-                  row.append(purHTML);
+      const feature = mr[0];
+      let bounds = feature.geometry.getBounds().clone();
+      bounds = bounds.transform(W.map.getProjectionObject(), "EPSG:4326");
+      const venues = await getAllVenues(bounds);
 
-                  const levelHTML = `<td>${venue.lockRank ? venue.lockRank + 1 : 1}</td>`;
-                  row.append(levelHTML);
+      $("#wazemyPlaces_venues > tbody").empty();
+      let purCount = 0;
+      let totalCount = 0;
 
-                  const colHTML = `<td>${venue.name}</td>`;
-                  row.append(colHTML);
-
-                  const errorsHTML = `<td>${status.errors.join("\r\n")}</td>`;
-                  row.append(errorsHTML);
-
-                  $("#wazemyPlaces_venues > tbody").append(row);
-                  totalCount++;
-                }
-
-                function evaluateVenue(venue: any): any {
-                  let status: { priority: 0 | 1 | 2 | 3; errors: string[] } = {
-                    priority: 0,
-                    errors: [],
-                  };
-                  if (typeof venue.name == "undefined") {
-                    status.priority = 3;
-                    status.errors.push("Name is not defined.");
-                  }
-                  return status;
-                }
-
-                function checkPURstatus(venue: any): boolean {
-                  if (venue.venueUpdateRequests?.length > 0) {
-                    return true;
-                  } else {
-                    return false;
-                  }
-                }
-              });
-              $("#wazemyPlaces_purCount").text(`# PUR = ${purCount}`);
-              $("#wazemyPlaces_totalCount").text(`# total = ${totalCount}`);
-            },
-            onerror: function (response) {
-              console.log("onerror");
-            },
-            onprogress: function (response) {
-              console.log("onprogress");
-            },
+      venues.forEach((venue: any) => {
+        // Check venue against rules.
+        const status = evaluateVenue(venue);
+        const isPUR: boolean = checkPURstatus(venue);
+        if (status.priority > 0 || isPUR) {
+          // Add venue to table.
+          let lon = 0;
+          let lat = 0;
+          if (venue.geometry.type === "Polygon") {
+            lon = venue.geometry.coordinates[0][0][0];
+            lat = venue.geometry.coordinates[0][0][1];
+          } else {
+            lon = venue.geometry.coordinates[0];
+            lat = venue.geometry.coordinates[1];
+          }
+          const row = $("<tr>");
+          row.attr("id", `${lon}:${lat}:${venue.id}`);
+          row.on("click", (e) => {
+            const target = e.currentTarget.id.split(":"); // split to lon:lat:id
+            const xy = OpenLayers.Layer.SphericalMercator.forwardMercator(
+              parseFloat(target[0]),
+              parseFloat(target[1]),
+            );
+            W.map.setCenter(xy);
           });
+
+          let purHTML = ``;
+          if (isPUR) {
+            purCount++;
+            if (venue.approved === false) {
+              purHTML = `<td align="center">N</td>`;
+            } else if (venue.venueUpdateRequests[0].type === "REQUEST") {
+              if (venue.venueUpdateRequests[0].subType === "FLAG") {
+                purHTML = `<td align="center">F</td>`;
+              } else if (venue.venueUpdateRequests[0].subType === "UPDATE") {
+                purHTML = `<td align="center">U</td>`;
+              } else if (venue.venueUpdateRequests[0].subType === "DELETE") {
+                purHTML = `<td align="center">D</td>`;
+              } else {
+                purHTML = `<td align="center">+</td>`;
+              }
+            } else if (venue.venueUpdateRequests[0].type === "IMAGE") {
+              purHTML = `<td align="center">I</td>`;
+            } else {
+              purHTML = `<td align="center">+</td>`;
+            }
+          } else {
+            purHTML = `<td></td>`;
+          }
+          row.append(purHTML);
+
+          const levelHTML = `<td>${venue.lockRank ? venue.lockRank + 1 : 1}</td>`;
+          row.append(levelHTML);
+
+          const colHTML = `<td>${venue.name}</td>`;
+          row.append(colHTML);
+
+          const errorsHTML = `<td>${status.errors.join("\r\n")}</td>`;
+          row.append(errorsHTML);
+
+          $("#wazemyPlaces_venues > tbody").append(row);
+          totalCount++;
+        }
+
+        $("#wazemyPlaces_purCount").text(`# PUR = ${purCount}`);
+        $("#wazemyPlaces_totalCount").text(`# total = ${totalCount}`);
+        $("#wazemyPlaces_scanStatus").text("");
+
+        function evaluateVenue(venue: any): any {
+          let status: { priority: 0 | 1 | 2 | 3; errors: string[] } = {
+            priority: 0,
+            errors: [],
+          };
+          if (typeof venue.name == "undefined") {
+            status.priority = 3;
+            status.errors.push("Name is not defined.");
+          }
+          return status;
+        }
+
+        function checkPURstatus(venue: any): boolean {
+          if (venue.venueUpdateRequests?.length > 0) {
+            return true;
+          } else {
+            return false;
+          }
         }
       });
+
+      async function getAllVenues(bounds: any) {
+        let venues: any = [];
+        // console.log(bounds);
+        const baseURL: string =
+          "https://www.waze.com/row-Descartes/app/Features?language=en&v=2&cameras=true&mapComments=true&roadClosures=true&roadTypes=1%2C2%2C3%2C4%2C5%2C6%2C7%2C8%2C9%2C10%2C15%2C16%2C17%2C18%2C19%2C20%2C22&venueLevel=4&venueFilter=1%2C1%2C1%2C1&";
+        let urls: string[] = [];
+        const stepSize: number = 0.05;
+        for (let left = bounds.left; left <= bounds.right; left += stepSize) {
+          for (
+            let bottom = bounds.bottom;
+            bottom <= bounds.top;
+            bottom += stepSize
+          ) {
+            urls.push(
+              `bbox=${left}%2C${bottom}%2C${left + stepSize > bounds.right ? bounds.right : left + stepSize}%2C${bottom + stepSize > bounds.top ? bounds.top : bottom + stepSize}`,
+            );
+          }
+        }
+        for (let i = 0; i < urls.length; i++) {
+          // console.log(baseURL + urls[i]);
+          $("#wazemyPlaces_scanStatus").text(
+            `Scanning tile ${i + 1} of ${urls.length}.`,
+          );
+          const result = await GM.xmlHttpRequest({
+            method: "GET",
+            responseType: "json",
+            url: baseURL + urls[i],
+          }).catch((e: any) => console.error(e));
+          venues = venues.concat(result.response.venues.objects);
+        }
+        return venues;
+      }
     });
     console.log("[WazeMY] PluginPlaces enabled.");
   }

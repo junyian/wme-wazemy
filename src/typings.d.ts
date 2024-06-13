@@ -3,6 +3,8 @@ declare var trafficCamsData: any;
 
 declare var OpenLayers: any;
 
+declare var GM: any;
+
 interface WmeState {
   isInitialMapDataLoaded: boolean; // if `wme-map-data-loaded` has already been dispatched
   isInitialized: boolean; // if `wme-initialzied` has already been dispatched
