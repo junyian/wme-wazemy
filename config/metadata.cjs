@@ -19,7 +19,7 @@ module.exports = {
     `https://greasyfork.org/scripts/24851-wazewrap/code/WazeWrap.js`,
     `https://greasyfork.org/scripts/449165-wme-wazemy-trafcamlist/code/wme-wazemy-trafcamlist.js`,
   ],
-  grant: ["GM_xmlhttpRequest"],
+  grant: ["GM_xmlhttpRequest", "GM.xmlHttpRequest"],
   connect: [
     "p3.fgies.com",
     "p4.fgies.com",

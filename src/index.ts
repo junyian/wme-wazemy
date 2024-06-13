@@ -1,16 +1,8 @@
 import "./style/main.less";
 import PluginManager from "./PluginManager";
 
-const updateMessage = `Complete rewrite of the WazeMY script to TypeScript.<br><br>
-  Bugfixes:<br>
-  <ul>
-    <li>Tooltip is not removed when feature is disabled via settings.</li>
-    <li>Zoom Pic didn't work on RPP images.</li>
-  </ul>
-  Improvements:<br>
-  <ul>
-    <li>Modernized the copy of lat/lon method.</li>
-  </ul>`;
+const updateMessage = `PluginPlaces: Tile-based PUR scanning.`;
+
 async function main() {
   console.log("[WazeMY] Script started");
   document.addEventListener("wme-ready", initializeWazeMY, { once: true });
