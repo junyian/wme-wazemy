@@ -20,7 +20,7 @@ export default class PluginFactory {
           [
             "rickylo103",
             "EpailXi",
-            "lufti_bihar",
+            "lutfi_bihar",
             "DINKAFTAC",
             "dinohoo",
             "inyshen",
