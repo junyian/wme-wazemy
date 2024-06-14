@@ -83,6 +83,8 @@ export default class PluginPlaces implements IPlugin {
     // Handle Scan button.
     $("#wazemyPlaces_scan").on("click", async () => {
       $("#wazemyPlaces_scanStatus").text("Scanning tiles.");
+      $("#wazemyPlaces_venues > tbody").empty();
+
       const map = W.map.getLayersBy("uniqueName", "__KlangValley");
       if (map.length === 0) {
         console.log("[PluginPlaces] No KVMR layer found. Aborting scan.");
@@ -102,7 +104,6 @@ export default class PluginPlaces implements IPlugin {
       bounds = bounds.transform(W.map.getProjectionObject(), "EPSG:4326");
       const venues = await getAllVenues(bounds);
 
-      $("#wazemyPlaces_venues > tbody").empty();
       let purCount = 0;
       let totalCount = 0;
 
@@ -179,9 +180,46 @@ export default class PluginPlaces implements IPlugin {
             priority: 0,
             errors: [],
           };
+          // Rule #1
           if (typeof venue.name == "undefined") {
+            if (!venue.categories.includes("RESIDENCE_HOME")) {
+              status.priority = 3;
+              status.errors.push("Missing name.");
+            }
+          } else {
+            // Rule #1a. Check name for all uppercase.
+            if (venue.name === venue.name.toUpperCase()) {
+              status.priority = 3;
+              status.errors.push("Name is uppercase.");
+            }
+
+            // Rule #1b. Check name for all lowercase.
+            if (venue.name === venue.name.toLowerCase()) {
+              status.priority = 3;
+              status.errors.push("Name is lowercase.");
+            }
+          }
+
+          // Rule #2. Min lock is not set.
+          if (venue.lockRank === 0) {
             status.priority = 3;
-            status.errors.push("Name is not defined.");
+            status.errors.push("Min lock not set.");
+          }
+
+          // Rule #5. Category specific rank locks.
+          if (
+            (venue.categories.includes("CHARGING_STATION") &&
+              venue.lockRank < 3) ||
+            (venue.categories.includes("GAS_STATION") && venue.lockRank < 3) ||
+            (venue.categories.includes("AIRPORT") && venue.lockRank < 4) ||
+            (venue.categories.includes("BUS_STATION") && venue.lockRank < 2) ||
+            (venue.categories.includes("FERRY_PIER") && venue.lockRank < 2) ||
+            (venue.categories.includes("JUNCTION_INTERCHANGE") &&
+              venue.lockRank < 2) ||
+            (venue.categories.includes("REST_AREA") && venue.lockRank < 2)
+          ) {
+            status.priority = 2;
+            status.errors.push("Min lock not set correctly.");
           }
           return status;
         }
