@@ -187,26 +187,41 @@ export default class PluginPlaces implements IPlugin {
               status.errors.push("Missing name.");
             }
           } else {
-            // Rule #1a. Check name for all uppercase.
+            // Rule: Check name for all uppercase.
             if (venue.name === venue.name.toUpperCase()) {
               status.priority = 3;
               status.errors.push("Name is uppercase.");
             }
 
-            // Rule #1b. Check name for all lowercase.
+            // Rule: Check name for all lowercase.
             if (venue.name === venue.name.toLowerCase()) {
               status.priority = 3;
               status.errors.push("Name is lowercase.");
             }
           }
 
-          // Rule #2. Min lock is not set.
+          // Rule: Min lock is not set.
           if (venue.lockRank === 0) {
             status.priority = 3;
             status.errors.push("Min lock not set.");
           }
 
-          // Rule #5. Category specific rank locks.
+          // Rule: Phone number format.
+          if (venue.phone) {
+            if (
+              /^[\d]{3}-[\d]{3} [\d]{4}$/.test(venue.phone) === false &&
+              /^[\d]{3}-[\d]{4} [\d]{4}$/.test(venue.phone) === false &&
+              /^[\d]{2}-[\d]{4} [\d]{4}$/.test(venue.phone) === false &&
+              /^[\d]{2}-[\d]{3} [\d]{4}$/.test(venue.phone) === false &&
+              /^[\d]{3}-[\d]{3} [\d]{3}$/.test(venue.phone) === false &&
+              /^[\d]{1}-[\d]{3}-[\d]{2}-[\d]{4}$/.test(venue.phone) === false
+            ) {
+              status.priority = 2;
+              status.errors.push("Phone number format incorrect.");
+            }
+          }
+
+          // Rule: Category specific rank locks.
           if (
             (venue.categories.includes("CHARGING_STATION") &&
               venue.lockRank < 3) ||
@@ -216,10 +231,58 @@ export default class PluginPlaces implements IPlugin {
             (venue.categories.includes("FERRY_PIER") && venue.lockRank < 2) ||
             (venue.categories.includes("JUNCTION_INTERCHANGE") &&
               venue.lockRank < 2) ||
-            (venue.categories.includes("REST_AREA") && venue.lockRank < 2)
+            (venue.categories.includes("REST_AREAS") && venue.lockRank < 2) ||
+            (venue.categories.includes("SEAPORT_MARINA_HARBOR") &&
+              venue.lockRank < 2) ||
+            (venue.categories.includes("TRAIN_STATION") &&
+              venue.lockRank < 2) ||
+            (venue.categories.includes("TUNNEL") && venue.lockRank < 2) ||
+            (venue.categories.includes("CITY_HALL") && venue.lockRank < 2) ||
+            (venue.categories.includes("COLLEGE_UNIVERSITY") &&
+              venue.lockRank < 2) ||
+            (venue.categories.includes("COURTHOUSE") && venue.lockRank < 2) ||
+            (venue.categories.includes("DOCTOR_CLINIC") &&
+              venue.lockRank < 2) ||
+            (venue.categories.includes("EMBASSY_CONSULATE") &&
+              venue.lockRank < 2) ||
+            (venue.categories.includes("FIRE_DEPARTMENT") &&
+              venue.lockRank < 2) ||
+            (venue.categories.includes("HOSPITAL_URGENT_CARE") &&
+              venue.lockRank < 3) ||
+            (venue.categories.includes("LIBRARY") && venue.lockRank < 2) ||
+            (venue.categories.includes("MILITARY") && venue.lockRank < 3) ||
+            (venue.categories.includes("POLICE_STATION") &&
+              venue.lockRank < 2) ||
+            (venue.categories.includes("PRISON_CORRECTIONAL_FACILITY") &&
+              venue.lockRank < 2) ||
+            (venue.categories.includes("RELIGIOUS_CENTER") &&
+              venue.lockRank < 3) ||
+            (venue.categories.includes("SCHOOL") && venue.lockRank < 2) ||
+            (venue.categories.includes("BANK_FINANCIAL") &&
+              venue.lockRank < 2) ||
+            (venue.categories.includes("SHOPPING_CENTER") &&
+              venue.lockRank < 2) ||
+            (venue.categories.includes("MUSEUM") && venue.lockRank < 2) ||
+            (venue.categories.includes("RACING_TRACK") && venue.lockRank < 2) ||
+            (venue.categories.includes("STADIUM_ARENA") &&
+              venue.lockRank < 2) ||
+            (venue.categories.includes("THEME_PARK") && venue.lockRank < 2) ||
+            (venue.categories.includes("TOURIST_ATTRACTION_HISTORIC_SITE") &&
+              venue.lockRank < 2) ||
+            (venue.categories.includes("ZOO_AQUARIUM") && venue.lockRank < 2) ||
+            (venue.categories.includes("BEACH") && venue.lockRank < 2) ||
+            (venue.categories.includes("GOLF_COURSE") && venue.lockRank < 2) ||
+            (venue.categories.includes("PARK") && venue.lockRank < 2) ||
+            (venue.categories.includes("FOREST_GROVE") && venue.lockRank < 2) ||
+            (venue.categories.includes("ISLAND") && venue.lockRank < 4) ||
+            (venue.categories.includes("RIVER_STREAM") && venue.lockRank < 3) ||
+            (venue.categories.includes("SEA_LAKE_POOL") &&
+              venue.lockRank < 5) ||
+            (venue.categories.includes("CANAL") && venue.lockRank < 2) ||
+            (venue.categories.includes("SWAMP_MARSH") && venue.lockRank < 2)
           ) {
             status.priority = 2;
-            status.errors.push("Min lock not set correctly.");
+            status.errors.push("Min lock incorrect.");
           }
           return status;
         }
