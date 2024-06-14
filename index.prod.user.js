@@ -1658,7 +1658,7 @@ class PluginFactory {
                 if ([
                     "rickylo103",
                     "EpailXi",
-                    "lufti_bihar",
+                    "lutfi_bihar",
                     "DINKAFTAC",
                     "dinohoo",
                     "inyshen",
