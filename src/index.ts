@@ -1,7 +1,7 @@
 import "./style/main.less";
 import PluginManager from "./PluginManager";
 
-const updateMessage = `PluginPlaces: Tile-based PUR scanning.`;
+const updateMessage = `PluginPlaces: Optimize tile scan size for performance.`;
 
 async function main() {
   console.log("[WazeMY] Script started");

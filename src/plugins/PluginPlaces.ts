@@ -302,7 +302,7 @@ export default class PluginPlaces implements IPlugin {
         const baseURL: string =
           "https://www.waze.com/row-Descartes/app/Features?language=en&v=2&cameras=true&mapComments=true&roadClosures=true&roadTypes=1%2C2%2C3%2C4%2C5%2C6%2C7%2C8%2C9%2C10%2C15%2C16%2C17%2C18%2C19%2C20%2C22&venueLevel=4&venueFilter=1%2C1%2C1%2C1&";
         let urls: string[] = [];
-        const stepSize: number = 0.05;
+        const stepSize: number = 0.1;
         for (let left = bounds.left; left <= bounds.right; left += stepSize) {
           for (
             let bottom = bounds.bottom;
