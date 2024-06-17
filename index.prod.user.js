@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name        WME WazeMY
 // @namespace   https://www.github.com/junyian/
-// @version     2024.06.15.01
+// @version     2024.06.17.01
 // @author      junyianl <junyian@gmail.com>
 // @source      https://github.com/junyian/wme-wazemy
 // @license     MIT
@@ -1683,7 +1683,7 @@ class PluginPlaces {
                 // console.log(bounds);
                 const baseURL = "https://www.waze.com/row-Descartes/app/Features?language=en&v=2&cameras=true&mapComments=true&roadClosures=true&roadTypes=1%2C2%2C3%2C4%2C5%2C6%2C7%2C8%2C9%2C10%2C15%2C16%2C17%2C18%2C19%2C20%2C22&venueLevel=4&venueFilter=1%2C1%2C1%2C1&";
                 let urls = [];
-                const stepSize = 0.05;
+                const stepSize = 0.1;
                 for (let left = bounds.left; left <= bounds.right; left += stepSize) {
                     for (let bottom = bounds.bottom; bottom <= bounds.top; bottom += stepSize) {
                         urls.push(`bbox=${left}%2C${bottom}%2C${left + stepSize > bounds.right ? bounds.right : left + stepSize}%2C${bottom + stepSize > bounds.top ? bounds.top : bottom + stepSize}`);
@@ -1871,7 +1871,7 @@ PluginManager.instance = new PluginManager(SettingsStorage.instance);
 ;// CONCATENATED MODULE: ./src/index.ts
 
 
-const updateMessage = `PluginPlaces: Tile-based PUR scanning.`;
+const updateMessage = `PluginPlaces: Optimize tile scan size for performance.`;
 async function src_main() {
     console.log("[WazeMY] Script started");
     document.addEventListener("wme-ready", initializeWazeMY, { once: true });
