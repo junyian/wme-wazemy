@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name        WME WazeMY
 // @namespace   https://www.github.com/junyian/
-// @version     2024.06.17.01
+// @version     2024.07.20.01
 // @author      junyianl <junyian@gmail.com>
 // @source      https://github.com/junyian/wme-wazemy
 // @license     MIT
@@ -1748,43 +1748,7 @@ class PluginFactory {
             case "PluginTrafficCameras":
                 return new PluginTrafficCameras();
             case "PluginKVMR":
-                if ([
-                    "rickylo103",
-                    "EpailXi",
-                    "lutfi_bihar",
-                    "DINKAFTAC",
-                    "dinohoo",
-                    "inyshen",
-                    "RapidGod",
-                    "omegahawk",
-                    "firman_bakti",
-                    "junyianl",
-                    "apis_",
-                    "izuaniz",
-                    "paulkok_my",
-                    "CoolCityCat",
-                    "Somebal",
-                    "james890526",
-                    "pamyskywalker",
-                    "hooijack",
-                    "zumaidi",
-                    "godericbal",
-                    "TinyWizard",
-                    "bayau72",
-                    "jayleongwk",
-                    "jessteepy",
-                    "kadyus",
-                    "beliamuda",
-                    "damaultz",
-                    "dckj",
-                    "kweeheng",
-                ].includes(WazeWrap.User.Username())) {
-                    return new PluginKVMR();
-                }
-                else {
-                    console.log(`Plugin not created: ${pluginName}`);
-                    return null;
-                }
+                return new PluginKVMR();
             case "PluginZoomPic":
                 return new PluginZoomPic();
             case "PluginPlaces":
@@ -1871,7 +1835,7 @@ PluginManager.instance = new PluginManager(SettingsStorage.instance);
 ;// CONCATENATED MODULE: ./src/index.ts
 
 
-const updateMessage = `PluginPlaces: Optimize tile scan size for performance.`;
+const updateMessage = `PluginKVMR: Plugin enabled for all editors.`;
 async function src_main() {
     console.log("[WazeMY] Script started");
     document.addEventListener("wme-ready", initializeWazeMY, { once: true });
