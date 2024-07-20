@@ -1,7 +1,7 @@
 import "./style/main.less";
 import PluginManager from "./PluginManager";
 
-const updateMessage = `PluginPlaces: Optimize tile scan size for performance.`;
+const updateMessage = `PluginKVMR: Plugin enabled for all editors.`;
 
 async function main() {
   console.log("[WazeMY] Script started");
