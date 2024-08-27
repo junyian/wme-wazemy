@@ -1,7 +1,7 @@
 import "./style/main.less";
 import PluginManager from "./PluginManager";
 
-const updateMessage = `PluginPlaces: Optimize tile scan size for performance.`;
+const updateMessage = `PluginTrafficCameras: Camera list updates by @EpailXi.`;
 
 async function main() {
   console.log("[WazeMY] Script started");
