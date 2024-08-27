@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name        WME WazeMY
 // @namespace   https://www.github.com/junyian/
-// @version     2024.07.20.01
+// @version     2024.08.27.01
 // @author      junyianl <junyian@gmail.com>
 // @source      https://github.com/junyian/wme-wazemy
 // @license     MIT
@@ -1835,7 +1835,7 @@ PluginManager.instance = new PluginManager(SettingsStorage.instance);
 ;// CONCATENATED MODULE: ./src/index.ts
 
 
-const updateMessage = `PluginKVMR: Plugin enabled for all editors.`;
+const updateMessage = `PluginTrafficCameras: Camera list updates by @EpailXi.`;
 async function src_main() {
     console.log("[WazeMY] Script started");
     document.addEventListener("wme-ready", initializeWazeMY, { once: true });
