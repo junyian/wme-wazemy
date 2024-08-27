@@ -16,44 +16,7 @@ export default class PluginFactory {
       case "PluginTrafficCameras":
         return new PluginTrafficCameras();
       case "PluginKVMR":
-        if (
-          [
-            "rickylo103",
-            "EpailXi",
-            "lutfi_bihar",
-            "DINKAFTAC",
-            "dinohoo",
-            "inyshen",
-            "RapidGod",
-            "omegahawk",
-            "firman_bakti",
-            "junyianl",
-            "apis_",
-            "izuaniz",
-            "paulkok_my",
-            "CoolCityCat",
-            "Somebal",
-            "james890526",
-            "pamyskywalker",
-            "hooijack",
-            "zumaidi",
-            "godericbal",
-            "TinyWizard",
-            "bayau72",
-            "jayleongwk",
-            "jessteepy",
-            "kadyus",
-            "beliamuda",
-            "damaultz",
-            "dckj",
-            "kweeheng",
-          ].includes(WazeWrap.User.Username())
-        ) {
-          return new PluginKVMR();
-        } else {
-          console.log(`Plugin not created: ${pluginName}`);
-          return null;
-        }
+        return new PluginKVMR();
       case "PluginZoomPic":
         return new PluginZoomPic();
       case "PluginPlaces":
