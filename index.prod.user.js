@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name        WME WazeMY
 // @namespace   https://www.github.com/junyian/
-// @version     2024.08.27.01
+// @version     2024.11.29.01
 // @author      junyianl <junyian@gmail.com>
 // @source      https://github.com/junyian/wme-wazemy
 // @license     MIT
@@ -1367,17 +1367,17 @@ class PluginZoomPic {
      */
     initialize() {
         $(document.body).on("click", () => {
-            const img = $("div.modal-dialog.venue-image-dialog > div > div.modal-body > img");
+            const img = $(".venue-image-dialog > wz-dialog-content > img");
             if (img.length > 0) {
                 const newImg = img[0];
-                const links = $("div.modal-dialog.venue-image-dialog > div > div.modal-header > a");
+                const links = $(".venue-image-dialog > wz-dialog-header > a");
                 for (let i = 0; i < links.length; i++) {
                     links[i].remove();
                 }
                 const newImgHTML = `<a href="${newImg.src.replace("thumbs/thumb700_", "")}" target="_blank">(+)</a>`;
-                $("div.modal-dialog.venue-image-dialog > div > div.modal-header").append(newImgHTML);
+                $("wz-dialog-header").append(newImgHTML);
             }
-            $("div.modal-dialog.venue-image-dialog");
+            // $("div.modal-dialog.venue-image-dialog");
         });
         console.log("[WazeMY] PluginZoomPic initialized.");
     }
@@ -1835,7 +1835,7 @@ PluginManager.instance = new PluginManager(SettingsStorage.instance);
 ;// CONCATENATED MODULE: ./src/index.ts
 
 
-const updateMessage = `PluginTrafficCameras: Camera list updates by @EpailXi.`;
+const updateMessage = `PluginZoomPic: Fix broken link after WME update.`;
 async function src_main() {
     console.log("[WazeMY] Script started");
     document.addEventListener("wme-ready", initializeWazeMY, { once: true });
@@ -1870,6 +1870,7 @@ async function initializeWazeMY() {
     pluginManager.addPlugin("places", "PluginPlaces");
 }
 src_main().catch((e) => {
+    console.log("WazeMY: Bootstrap");
     console.log(e);
 });
 
