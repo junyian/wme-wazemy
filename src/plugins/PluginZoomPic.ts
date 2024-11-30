@@ -12,24 +12,20 @@ export default class PluginZoomPic implements IPlugin {
    */
   initialize(): void {
     $(document.body).on("click", () => {
-      const img = $(
-        "div.modal-dialog.venue-image-dialog > div > div.modal-body > img",
-      );
+      const img = $(".venue-image-dialog > wz-dialog-content > img");
       if (img.length > 0) {
         const newImg = img[0] as HTMLImageElement;
 
         const links: JQuery<HTMLElement> = $(
-          "div.modal-dialog.venue-image-dialog > div > div.modal-header > a",
+          ".venue-image-dialog > wz-dialog-header > a",
         );
         for (let i = 0; i < links.length; i++) {
           links[i].remove();
         }
         const newImgHTML = `<a href="${newImg.src.replace("thumbs/thumb700_", "")}" target="_blank">(+)</a>`;
-        $(
-          "div.modal-dialog.venue-image-dialog > div > div.modal-header",
-        ).append(newImgHTML);
+        $("wz-dialog-header").append(newImgHTML);
       }
-      $("div.modal-dialog.venue-image-dialog");
+      // $("div.modal-dialog.venue-image-dialog");
     });
     console.log("[WazeMY] PluginZoomPic initialized.");
   }

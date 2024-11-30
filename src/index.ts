@@ -1,7 +1,7 @@
 import "./style/main.less";
 import PluginManager from "./PluginManager";
 
-const updateMessage = `PluginTrafficCameras: Camera list updates by @EpailXi.`;
+const updateMessage = `PluginZoomPic: Fix broken link after WME update.`;
 
 async function main() {
   console.log("[WazeMY] Script started");
@@ -49,5 +49,6 @@ async function initializeWazeMY() {
 }
 
 main().catch((e) => {
+  console.log("WazeMY: Bootstrap");
   console.log(e);
 });
