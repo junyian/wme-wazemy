@@ -724,6 +724,11 @@ class PluginTooltip {
                 const segmentId = segment.attributes.wazeFeature.id;
                 const address = segment.attributes.wazeFeature._wmeObject.getAddress();
                 output = `<b>${address.getStreetName()}</b><br>`;
+                const altStreets = address.getAltStreets();
+                for (let i = 0; i < altStreets.length; i++) {
+                    const altStreetName = altStreets[i].getStreetName();
+                    output += `Alt: ${altStreetName}<br>`;
+                }
                 output += `${address.getCityName()}, ${address.getStateName()}<br>`;
                 output += `<b>ID:</b> ${segmentId}<br>`;
                 output += `<b>Lock:</b> ${segment.attributes.wazeFeature._wmeObject.getLockRank() + 1}`;
@@ -1835,7 +1840,8 @@ PluginManager.instance = new PluginManager(SettingsStorage.instance);
 ;// CONCATENATED MODULE: ./src/index.ts
 
 
-const updateMessage = `PluginZoomPic: Fix broken link after WME update.`;
+const updateMessage = `PluginZoomPic: Fix broken link after WME update.` +
+    `PluginTooltip: Include alternate addresses for segments.`;
 async function src_main() {
     console.log("[WazeMY] Script started");
     document.addEventListener("wme-ready", initializeWazeMY, { once: true });
