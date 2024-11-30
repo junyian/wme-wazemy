@@ -117,6 +117,11 @@ export default class PluginTooltip implements IPlugin {
         const segmentId = segment.attributes.wazeFeature.id;
         const address = segment.attributes.wazeFeature._wmeObject.getAddress();
         output = `<b>${address.getStreetName()}</b><br>`;
+        const altStreets = address.getAltStreets();
+        for (let i = 0; i < altStreets.length; i++) {
+          const altStreetName = altStreets[i].getStreetName();
+          output += `Alt: ${altStreetName}<br>`;
+        }
         output += `${address.getCityName()}, ${address.getStateName()}<br>`;
         output += `<b>ID:</b> ${segmentId}<br>`;
         output += `<b>Lock:</b> ${segment.attributes.wazeFeature._wmeObject.getLockRank() + 1}`;

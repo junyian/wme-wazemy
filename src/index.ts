@@ -1,7 +1,9 @@
 import "./style/main.less";
 import PluginManager from "./PluginManager";
 
-const updateMessage = `PluginZoomPic: Fix broken link after WME update.`;
+const updateMessage =
+  `PluginZoomPic: Fix broken link after WME update.` +
+  `PluginTooltip: Include alternate addresses for segments.`;
 
 async function main() {
   console.log("[WazeMY] Script started");
