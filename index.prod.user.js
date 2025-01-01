@@ -703,6 +703,8 @@ class PluginTooltip {
             const segment = W.map.segmentLayer.getFeatureBy("renderIntent", "highlight");
             if (landmark) {
                 output = `<b>${landmark.attributes.wazeFeature._wmeObject.attributes.name}</b><br>`;
+                const categories = landmark.attributes.wazeFeature._wmeObject.getCategories();
+                output += `<i>[${categories.join(", ")}]</i><br>`;
                 const address = landmark.attributes.wazeFeature._wmeObject.getAddress();
                 try {
                     output += address.getHouseNumber()
