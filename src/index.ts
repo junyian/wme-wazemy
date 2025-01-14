@@ -1,7 +1,9 @@
 import "./style/main.less";
 import PluginManager from "./PluginManager";
 
-const updateMessage = `PluginTooltip: Display POI categories.`;
+const updateMessage =
+  `PluginTooltip: Display POI categories.<br>` +
+  `PluginTooltip: Display segment direction.`;
 
 async function main() {
   console.log("[WazeMY] Script started");

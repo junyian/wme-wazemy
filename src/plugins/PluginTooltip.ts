@@ -129,6 +129,19 @@ export default class PluginTooltip implements IPlugin {
         }
         output += `${address.getCityName()}, ${address.getStateName()}<br>`;
         output += `<b>ID:</b> ${segmentId}<br>`;
+        const direction =
+          segment.attributes.wazeFeature._wmeObject.getDirection();
+        switch (direction) {
+          case 1:
+            output += `<b>Direction:</b> A -> B<br>`;
+            break;
+          case 2:
+            output += `<b>Direction:</b> B -> A<br>`;
+            break;
+          case 3:
+            output += `<b>Direction:</b> Two way<br>`;
+            break;
+        }
         output += `<b>Lock:</b> ${segment.attributes.wazeFeature._wmeObject.getLockRank() + 1}`;
         showTooltip = true;
       }
