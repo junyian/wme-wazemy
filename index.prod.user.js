@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name        WME WazeMY
 // @namespace   https://www.github.com/junyian/
-// @version     2025.01.01.01
+// @version     2025.01.14.01
 // @author      junyianl <junyian@gmail.com>
 // @source      https://github.com/junyian/wme-wazemy
 // @license     MIT
@@ -502,8 +502,6 @@ module.exports = styleTagTransform;
 /******/ 	
 /************************************************************************/
 var __webpack_exports__ = {};
-// This entry need to be wrapped in an IIFE because it need to be isolated against other modules in the chunk.
-(() => {
 
 // EXTERNAL MODULE: ./node_modules/style-loader/dist/runtime/injectStylesIntoStyleTag.js
 var injectStylesIntoStyleTag = __webpack_require__("./node_modules/style-loader/dist/runtime/injectStylesIntoStyleTag.js");
@@ -525,7 +523,7 @@ var styleTagTransform = __webpack_require__("./node_modules/style-loader/dist/ru
 var styleTagTransform_default = /*#__PURE__*/__webpack_require__.n(styleTagTransform);
 // EXTERNAL MODULE: ./node_modules/css-loader/dist/cjs.js!./node_modules/less-loader/dist/cjs.js!./src/style/main.less
 var main = __webpack_require__("./node_modules/css-loader/dist/cjs.js!./node_modules/less-loader/dist/cjs.js!./src/style/main.less");
-;// CONCATENATED MODULE: ./src/style/main.less
+;// ./src/style/main.less
 
       
       
@@ -552,7 +550,7 @@ var update = injectStylesIntoStyleTag_default()(main/* default */.A, options);
 
        /* harmony default export */ const style_main = (main/* default */.A && main/* default */.A.locals ? main/* default */.A.locals : undefined);
 
-;// CONCATENATED MODULE: ./src/SettingsStorage.ts
+;// ./src/SettingsStorage.ts
 class SettingsStorage {
     /**
      * Initializes a new instance of the SettingsStorage class with the specified storage key.
@@ -618,7 +616,7 @@ class SettingsStorage {
 }
 SettingsStorage.instance = new SettingsStorage("WME_wazemySettings");
 
-;// CONCATENATED MODULE: ./src/plugins/PluginTooltip.ts
+;// ./src/plugins/PluginTooltip.ts
 
 
 class PluginTooltip {
@@ -733,6 +731,18 @@ class PluginTooltip {
                 }
                 output += `${address.getCityName()}, ${address.getStateName()}<br>`;
                 output += `<b>ID:</b> ${segmentId}<br>`;
+                const direction = segment.attributes.wazeFeature._wmeObject.getDirection();
+                switch (direction) {
+                    case 1:
+                        output += `<b>Direction:</b> A -> B<br>`;
+                        break;
+                    case 2:
+                        output += `<b>Direction:</b> B -> A<br>`;
+                        break;
+                    case 3:
+                        output += `<b>Direction:</b> Two way<br>`;
+                        break;
+                }
                 output += `<b>Lock:</b> ${segment.attributes.wazeFeature._wmeObject.getLockRank() + 1}`;
                 showTooltip = true;
             }
@@ -767,7 +777,7 @@ class PluginTooltip {
     }
 }
 
-;// CONCATENATED MODULE: ./src/plugins/PluginCopyLatLon.ts
+;// ./src/plugins/PluginCopyLatLon.ts
 class PluginCopyLatLon {
     constructor() {
         this.initialize();
@@ -819,7 +829,7 @@ class PluginCopyLatLon {
     }
 }
 
-;// CONCATENATED MODULE: ./src/plugins/PluginTrafficCameras.ts
+;// ./src/plugins/PluginTrafficCameras.ts
 
 
 class PluginTrafficCameras {
@@ -1149,7 +1159,7 @@ class PluginTrafficCameras {
     }
 }
 
-;// CONCATENATED MODULE: ./src/plugins/PluginKVMR.ts
+;// ./src/plugins/PluginKVMR.ts
 
 
 class PluginKVMR {
@@ -1362,7 +1372,7 @@ class PluginKVMR {
     }
 }
 
-;// CONCATENATED MODULE: ./src/plugins/PluginZoomPic.ts
+;// ./src/plugins/PluginZoomPic.ts
 class PluginZoomPic {
     constructor() {
         this.initialize();
@@ -1414,7 +1424,7 @@ class PluginZoomPic {
     }
 }
 
-;// CONCATENATED MODULE: ./src/plugins/PluginPlaces.ts
+;// ./src/plugins/PluginPlaces.ts
 
 
 class PluginPlaces {
@@ -1738,7 +1748,7 @@ class PluginPlaces {
     }
 }
 
-;// CONCATENATED MODULE: ./src/PluginFactory.ts
+;// ./src/PluginFactory.ts
 
 
 
@@ -1766,7 +1776,7 @@ class PluginFactory {
     }
 }
 
-;// CONCATENATED MODULE: ./src/PluginManager.ts
+;// ./src/PluginManager.ts
 
 
 class PluginManager {
@@ -1839,10 +1849,11 @@ class PluginManager {
 }
 PluginManager.instance = new PluginManager(SettingsStorage.instance);
 
-;// CONCATENATED MODULE: ./src/index.ts
+;// ./src/index.ts
 
 
-const updateMessage = `PluginTooltip: Display POI categories.`;
+const updateMessage = `PluginTooltip: Display POI categories.<br>` +
+    `PluginTooltip: Display segment direction.`;
 async function src_main() {
     console.log("[WazeMY] Script started");
     document.addEventListener("wme-ready", initializeWazeMY, { once: true });
@@ -1880,8 +1891,6 @@ src_main().catch((e) => {
     console.log("WazeMY: Bootstrap");
     console.log(e);
 });
-
-})();
 
 /******/ })()
 ;
