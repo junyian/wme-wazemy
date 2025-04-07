@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name        WME WazeMY
 // @namespace   https://www.github.com/junyian/
-// @version     2025.03.26.01
+// @version     2025.04.08.01
 // @author      junyianl <junyian@gmail.com>
 // @source      https://github.com/junyian/wme-wazemy
 // @license     MIT
@@ -11,6 +11,7 @@
 // @require     https://greasyfork.org/scripts/449165-wme-wazemy-trafcamlist/code/wme-wazemy-trafcamlist.js
 // @grant       GM_xmlhttpRequest
 // @grant       GM.xmlHttpRequest
+// @grant       unsafeWindow
 // @connect     p3.fgies.com
 // @connect     p4.fgies.com
 // @connect     t2.fgies.com
@@ -1852,10 +1853,21 @@ PluginManager.instance = new PluginManager(SettingsStorage.instance);
 ;// ./src/index.ts
 
 
-const updateMessage = `PluginTrafficCameras: Traffic cameras updates.`;
+const updateMessage = `Initial port to WME SDK.`;
 async function src_main() {
     console.log("[WazeMY] Script started");
-    document.addEventListener("wme-ready", initializeWazeMY, { once: true });
+    unsafeWindow.SDK_INITIALIZED.then(initScript);
+    // document.addEventListener("wme-ready", initializeWazeMY, { once: true });
+}
+function initScript() {
+    if (!unsafeWindow.getWmeSdk) {
+        throw new Error("WME SDK not available");
+    }
+    const sdk = unsafeWindow.getWmeSdk({
+        scriptId: "wme-wazemy",
+        scriptName: "WazeMY",
+    });
+    sdk.Events.once({ eventName: "wme-ready" }).then(initializeWazeMY);
 }
 async function initializeWazeMY() {
     console.log("[WazeMY] WME ready");
