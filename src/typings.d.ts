@@ -1,6 +1,8 @@
 declare module "*.less";
 declare var trafficCamsData: any;
 
+declare var SDK_INITIALIZED: Promise<void>;
+
 declare var OpenLayers: any;
 
 declare var GM: any;

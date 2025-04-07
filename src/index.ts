@@ -1,11 +1,25 @@
 import "./style/main.less";
 import PluginManager from "./PluginManager";
+import { WmeSDK } from "wme-sdk-typings";
 
-const updateMessage = `PluginTrafficCameras: Traffic cameras updates.`;
+const updateMessage = `Initial port to WME SDK.`;
 
 async function main() {
   console.log("[WazeMY] Script started");
-  document.addEventListener("wme-ready", initializeWazeMY, { once: true });
+  unsafeWindow.SDK_INITIALIZED.then(initScript);
+  // document.addEventListener("wme-ready", initializeWazeMY, { once: true });
+}
+
+function initScript() {
+  if (!unsafeWindow.getWmeSdk) {
+    throw new Error("WME SDK not available");
+  }
+  const sdk: WmeSDK = unsafeWindow.getWmeSdk({
+    scriptId: "wme-wazemy",
+    scriptName: "WazeMY",
+  });
+
+  sdk.Events.once({ eventName: "wme-ready" }).then(initializeWazeMY);
 }
 
 async function initializeWazeMY() {
