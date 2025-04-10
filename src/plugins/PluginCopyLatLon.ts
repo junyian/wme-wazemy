@@ -1,7 +1,11 @@
 import IPlugin from "../IPlugin";
+import { KeyboardShortcut, WmeSDK } from "wme-sdk-typings";
 
 export default class PluginCopyLatLon implements IPlugin {
-  constructor() {
+  private sdk: WmeSDK;
+
+  constructor(sdk: WmeSDK) {
+    this.sdk = sdk;
     this.initialize();
   }
 
@@ -25,15 +29,14 @@ export default class PluginCopyLatLon implements IPlugin {
    * @return {void} This function does not return anything.
    */
   enable(): void {
-    new WazeWrap.Interface.Shortcut(
-      "WazeMY_latloncopy",
-      "Copies lat/lon of mouse position to clipboard.",
-      "wazemy",
-      "WazeMY",
-      "CA+c",
-      this.copyLatLon,
-      null,
-    ).add();
+    const shortcut: KeyboardShortcut = {
+      callback: this.copyLatLon,
+      description: "Copy lat/lon of mouse position to clipboard.",
+      shortcutId: "WazeMY_latloncopy",
+      shortcutKeys: "CA+c",
+    };
+    this.sdk.Shortcuts.createShortcut(shortcut);
+
     console.log("[WazeMY] PluginCopyLatLon enabled.");
   }
 
@@ -61,6 +64,7 @@ export default class PluginCopyLatLon implements IPlugin {
    * @return {void} This function does not return anything.
    */
   copyLatLon(): void {
+    console.log("[WazeMY] Copy lat/lon shortcut triggered.");
     const latlon = $(".wz-map-ol-control-span-mouse-position").text();
     navigator.clipboard.writeText(latlon);
   }

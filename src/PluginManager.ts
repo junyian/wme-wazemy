@@ -1,3 +1,4 @@
+import { WmeSDK } from "wme-sdk-typings";
 import IPlugin from "./IPlugin";
 import PluginFactory from "./PluginFactory";
 import SettingsStorage from "./SettingsStorage";
@@ -18,8 +19,8 @@ export default class PluginManager {
    * @param {string} type - The type of plugin to create.
    * @return {void} This function does not return anything.
    */
-  addPlugin(key: string, type: string): void {
-    const plugin = PluginFactory.createPlugin(type);
+  addPlugin(key: string, type: string, sdk: WmeSDK): void {
+    const plugin = PluginFactory.createPlugin(type, sdk);
     this.plugins[key] = plugin;
     const pluginSettings = this.settingsStorage.getSetting(key);
 
