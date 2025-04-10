@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name        WME WazeMY
 // @namespace   https://www.github.com/junyian/
-// @version     2025.04.09.01
+// @version     2025.04.10.01
 // @author      junyianl <junyian@gmail.com>
 // @source      https://github.com/junyian/wme-wazemy
 // @license     MIT
@@ -780,7 +780,8 @@ class PluginTooltip {
 
 ;// ./src/plugins/PluginCopyLatLon.ts
 class PluginCopyLatLon {
-    constructor() {
+    constructor(sdk) {
+        this.sdk = sdk;
         this.initialize();
     }
     /**
@@ -800,7 +801,13 @@ class PluginCopyLatLon {
      * @return {void} This function does not return anything.
      */
     enable() {
-        new WazeWrap.Interface.Shortcut("WazeMY_latloncopy", "Copies lat/lon of mouse position to clipboard.", "wazemy", "WazeMY", "CA+c", this.copyLatLon, null).add();
+        const shortcut = {
+            callback: this.copyLatLon,
+            description: "Copy lat/lon of mouse position to clipboard.",
+            shortcutId: "WazeMY_latloncopy",
+            shortcutKeys: "CA+c",
+        };
+        this.sdk.Shortcuts.createShortcut(shortcut);
         console.log("[WazeMY] PluginCopyLatLon enabled.");
     }
     /**
@@ -825,6 +832,7 @@ class PluginCopyLatLon {
      * @return {void} This function does not return anything.
      */
     copyLatLon() {
+        console.log("[WazeMY] Copy lat/lon shortcut triggered.");
         const latlon = $(".wz-map-ol-control-span-mouse-position").text();
         navigator.clipboard.writeText(latlon);
     }
@@ -1757,12 +1765,12 @@ class PluginPlaces {
 
 
 class PluginFactory {
-    static createPlugin(pluginName) {
+    static createPlugin(pluginName, sdk) {
         switch (pluginName) {
             case "PluginTooltip":
                 return new PluginTooltip();
             case "PluginCopyLatLon":
-                return new PluginCopyLatLon();
+                return new PluginCopyLatLon(sdk);
             case "PluginTrafficCameras":
                 return new PluginTrafficCameras();
             case "PluginKVMR":
@@ -1792,8 +1800,8 @@ class PluginManager {
      * @param {string} type - The type of plugin to create.
      * @return {void} This function does not return anything.
      */
-    addPlugin(key, type) {
-        const plugin = PluginFactory.createPlugin(type);
+    addPlugin(key, type, sdk) {
+        const plugin = PluginFactory.createPlugin(type, sdk);
         this.plugins[key] = plugin;
         const pluginSettings = this.settingsStorage.getSetting(key);
         if (pluginSettings) {
@@ -1891,12 +1899,12 @@ async function initializeWazeMY() {
         </fieldset>`;
         WazeWrap.Interface.ShowScriptUpdate("WME WazeMY", GM_info.script.version, updateMessage, "https://greasyfork.org/en/scripts/404584-wazemy", "javascript:alert('No forum available');");
         const pluginManager = PluginManager.instance;
-        pluginManager.addPlugin("copylatlon", "PluginCopyLatLon");
-        pluginManager.addPlugin("tooltip", "PluginTooltip");
-        pluginManager.addPlugin("trafcam", "PluginTrafficCameras");
-        pluginManager.addPlugin("kvmr", "PluginKVMR");
-        pluginManager.addPlugin("zoompic", "PluginZoomPic");
-        pluginManager.addPlugin("places", "PluginPlaces");
+        pluginManager.addPlugin("copylatlon", "PluginCopyLatLon", sdk);
+        pluginManager.addPlugin("tooltip", "PluginTooltip", sdk);
+        pluginManager.addPlugin("trafcam", "PluginTrafficCameras", sdk);
+        pluginManager.addPlugin("kvmr", "PluginKVMR", sdk);
+        pluginManager.addPlugin("zoompic", "PluginZoomPic", sdk);
+        pluginManager.addPlugin("places", "PluginPlaces", sdk);
     });
 }
 src_main().catch((e) => {
