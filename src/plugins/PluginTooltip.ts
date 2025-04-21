@@ -1,9 +1,13 @@
+import { WmeSDK } from "wme-sdk-typings";
 import IPlugin from "../IPlugin";
 import PluginManager from "../PluginManager";
 import SettingsStorage from "../SettingsStorage";
 
 export default class PluginTooltip implements IPlugin {
-  constructor() {
+  private sdk: WmeSDK;
+
+  constructor(sdk: WmeSDK) {
+    this.sdk = sdk;
     this.initialize();
   }
 
@@ -45,7 +49,12 @@ export default class PluginTooltip implements IPlugin {
    * @return {void} This function does not return anything.
    */
   enable(): void {
-    WazeWrap.Events.register("mousemove", null, this.showTooltip);
+    // WazeWrap.Events.register("mousemove", null, this.showTooltip.bind(this));
+    this.sdk.Events.on({
+      eventName: "wme-map-mouse-move",
+      eventHandler: this.showTooltip.bind(this),
+    });
+
     $("#wazemyTooltip").show();
     console.log("[WazeMY] PluginTooltip enabled.");
   }
@@ -56,7 +65,11 @@ export default class PluginTooltip implements IPlugin {
    * @return {void} This function does not return anything.
    */
   disable(): void {
-    WazeWrap.Events.unregister("mousemove", null, this.showTooltip);
+    // WazeWrap.Events.unregister("mousemove", null, this.showTooltip);
+    this.sdk.Events.off({
+      eventName: "wme-map-mouse-move",
+      eventHandler: this.showTooltip.bind(this),
+    });
     $("#wazemyTooltip").hide();
     console.log("[WazeMY] PluginTooltip disabled.");
   }
@@ -148,10 +161,24 @@ export default class PluginTooltip implements IPlugin {
 
       const tooltipDiv = $("#wazemyTooltip");
       if (showTooltip === true) {
+        let positions: string[] = [];
+
+        positions = document
+          .querySelector(".wz-map-ol-control-span-mouse-position")
+          .innerHTML.split(" ");
+        let pixel = this.sdk.Map.getPixelFromLonLat({
+          lonLat: {
+            lat: parseFloat(positions[0]),
+            lon: parseFloat(positions[1]),
+          },
+        });
+
         const tw = tooltipDiv.innerWidth();
         const th = tooltipDiv.innerHeight();
-        let tooltipX = e.clientX + window.scrollX + 15;
-        let tooltipY = e.clientY + window.scrollY + 15;
+
+        let tooltipX = pixel.x + window.scrollX + 15;
+        let tooltipY = pixel.y + window.scrollY + 15;
+
         // Handle cases where tooltip is too near the edge.
         if (tooltipX + tw > W.map.$map.innerWidth()) {
           tooltipX -= tw + 20; // 20 = scroll bar size

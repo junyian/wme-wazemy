@@ -11,7 +11,7 @@ export default class PluginFactory {
   static createPlugin(pluginName: string, sdk: WmeSDK): IPlugin {
     switch (pluginName) {
       case "PluginTooltip":
-        return new PluginTooltip();
+        return new PluginTooltip(sdk);
       case "PluginCopyLatLon":
         return new PluginCopyLatLon(sdk);
       case "PluginTrafficCameras":
