@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name        WME WazeMY
 // @namespace   https://www.github.com/junyian/
-// @version     2025.04.10.01
+// @version     2025.04.22.01
 // @author      junyianl <junyian@gmail.com>
 // @source      https://github.com/junyian/wme-wazemy
 // @license     MIT
@@ -621,7 +621,8 @@ SettingsStorage.instance = new SettingsStorage("WME_wazemySettings");
 
 
 class PluginTooltip {
-    constructor() {
+    constructor(sdk) {
+        this.sdk = sdk;
         this.initialize();
     }
     /**
@@ -658,7 +659,11 @@ class PluginTooltip {
      * @return {void} This function does not return anything.
      */
     enable() {
-        WazeWrap.Events.register("mousemove", null, this.showTooltip);
+        // WazeWrap.Events.register("mousemove", null, this.showTooltip.bind(this));
+        this.sdk.Events.on({
+            eventName: "wme-map-mouse-move",
+            eventHandler: this.showTooltip.bind(this),
+        });
         $("#wazemyTooltip").show();
         console.log("[WazeMY] PluginTooltip enabled.");
     }
@@ -668,7 +673,11 @@ class PluginTooltip {
      * @return {void} This function does not return anything.
      */
     disable() {
-        WazeWrap.Events.unregister("mousemove", null, this.showTooltip);
+        // WazeWrap.Events.unregister("mousemove", null, this.showTooltip);
+        this.sdk.Events.off({
+            eventName: "wme-map-mouse-move",
+            eventHandler: this.showTooltip.bind(this),
+        });
         $("#wazemyTooltip").hide();
         console.log("[WazeMY] PluginTooltip disabled.");
     }
@@ -749,10 +758,20 @@ class PluginTooltip {
             }
             const tooltipDiv = $("#wazemyTooltip");
             if (showTooltip === true) {
+                let positions = [];
+                positions = document
+                    .querySelector(".wz-map-ol-control-span-mouse-position")
+                    .innerHTML.split(" ");
+                let pixel = this.sdk.Map.getPixelFromLonLat({
+                    lonLat: {
+                        lat: parseFloat(positions[0]),
+                        lon: parseFloat(positions[1]),
+                    },
+                });
                 const tw = tooltipDiv.innerWidth();
                 const th = tooltipDiv.innerHeight();
-                let tooltipX = e.clientX + window.scrollX + 15;
-                let tooltipY = e.clientY + window.scrollY + 15;
+                let tooltipX = pixel.x + window.scrollX + 15;
+                let tooltipY = pixel.y + window.scrollY + 15;
                 // Handle cases where tooltip is too near the edge.
                 if (tooltipX + tw > W.map.$map.innerWidth()) {
                     tooltipX -= tw + 20; // 20 = scroll bar size
@@ -1768,7 +1787,7 @@ class PluginFactory {
     static createPlugin(pluginName, sdk) {
         switch (pluginName) {
             case "PluginTooltip":
-                return new PluginTooltip();
+                return new PluginTooltip(sdk);
             case "PluginCopyLatLon":
                 return new PluginCopyLatLon(sdk);
             case "PluginTrafficCameras":
