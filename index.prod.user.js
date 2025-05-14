@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name        WME WazeMY
 // @namespace   https://www.github.com/junyian/
-// @version     2025.04.22.01
+// @version     2025.05.08.01
 // @author      junyianl <junyian@gmail.com>
 // @source      https://github.com/junyian/wme-wazemy
 // @license     MIT
@@ -662,7 +662,7 @@ class PluginTooltip {
         // WazeWrap.Events.register("mousemove", null, this.showTooltip.bind(this));
         this.sdk.Events.on({
             eventName: "wme-map-mouse-move",
-            eventHandler: this.showTooltip.bind(this),
+            eventHandler: showTooltip,
         });
         $("#wazemyTooltip").show();
         console.log("[WazeMY] PluginTooltip enabled.");
@@ -676,7 +676,7 @@ class PluginTooltip {
         // WazeWrap.Events.unregister("mousemove", null, this.showTooltip);
         this.sdk.Events.off({
             eventName: "wme-map-mouse-move",
-            eventHandler: this.showTooltip.bind(this),
+            eventHandler: showTooltip,
         });
         $("#wazemyTooltip").hide();
         console.log("[WazeMY] PluginTooltip disabled.");
@@ -696,103 +696,106 @@ class PluginTooltip {
         }
         console.log("[WazeMY] PluginTooltip settings updated.", settings);
     }
-    /**
-     * Shows the tooltip at the mouse position.
-     *
-     * @param {MouseEvent} e - The mouse event.
-     * @return {void} This function does not return anything.
-     */
-    showTooltip(e) {
-        let output = "";
-        let showTooltip = false;
-        // Manual check of settings because unregistering event is not working.
-        if ($("#wazemySettings_tooltip_enable").prop("checked") === true) {
-            const landmark = W.map.venueLayer.getFeatureBy("renderIntent", "highlight");
-            const segment = W.map.segmentLayer.getFeatureBy("renderIntent", "highlight");
-            if (landmark) {
-                output = `<b>${landmark.attributes.wazeFeature._wmeObject.attributes.name}</b><br>`;
-                const categories = landmark.attributes.wazeFeature._wmeObject.getCategories();
-                output += `<i>[${categories.join(", ")}]</i><br>`;
-                const address = landmark.attributes.wazeFeature._wmeObject.getAddress();
-                try {
-                    output += address.getHouseNumber()
-                        ? `${address.getHouseNumber()}, `
-                        : "";
-                    output += address.getStreetName()
-                        ? `${address.getStreetName()}<br>`
-                        : `No street<br>`;
-                    output += `${address.getCityName()}, `;
-                    output += `${address.getStateName()}<br>`;
-                }
-                catch {
-                    output += "No address<br>";
-                }
-                output += `<b>Lock:</b> ${landmark.attributes.wazeFeature._wmeObject.getLockRank() + 1}`;
-                showTooltip = true;
+}
+/**
+   * Shows the tooltip at the mouse position.
+   *
+   * @return {void} This function does not return anything.
+   */
+function showTooltip() {
+    let output = "";
+    let showTooltip = false;
+    const sdk = unsafeWindow.getWmeSdk({
+        scriptId: "wme-wazemy",
+        scriptName: "WazeMY",
+    });
+    // Manual check of settings because unregistering event is not working.
+    if ($("#wazemySettings_tooltip_enable").prop("checked") === true) {
+        const landmark = W.map.venueLayer.getFeatureBy("renderIntent", "highlight");
+        const segment = W.map.segmentLayer.getFeatureBy("renderIntent", "highlight");
+        if (landmark) {
+            output = `<b>${landmark.attributes.wazeFeature._wmeObject.attributes.name}</b><br>`;
+            const categories = landmark.attributes.wazeFeature._wmeObject.getCategories();
+            output += `<i>[${categories.join(", ")}]</i><br>`;
+            const address = landmark.attributes.wazeFeature._wmeObject.getAddress();
+            try {
+                output += address.getHouseNumber()
+                    ? `${address.getHouseNumber()}, `
+                    : "";
+                output += address.getStreetName()
+                    ? `${address.getStreetName()}<br>`
+                    : `No street<br>`;
+                output += `${address.getCityName()}, `;
+                output += `${address.getStateName()}<br>`;
             }
-            else if (segment) {
-                const segmentId = segment.attributes.wazeFeature.id;
-                const address = segment.attributes.wazeFeature._wmeObject.getAddress();
-                output = `<b>${address.getStreetName()}</b><br>`;
-                const altStreets = address.getAltStreets();
-                for (let i = 0; i < altStreets.length; i++) {
-                    const altStreetName = altStreets[i].getStreetName();
-                    output += `Alt: ${altStreetName}<br>`;
-                }
-                output += `${address.getCityName()}, ${address.getStateName()}<br>`;
-                output += `<b>ID:</b> ${segmentId}<br>`;
-                const direction = segment.attributes.wazeFeature._wmeObject.getDirection();
-                switch (direction) {
-                    case 1:
-                        output += `<b>Direction:</b> A -> B<br>`;
-                        break;
-                    case 2:
-                        output += `<b>Direction:</b> B -> A<br>`;
-                        break;
-                    case 3:
-                        output += `<b>Direction:</b> Two way<br>`;
-                        break;
-                }
-                output += `<b>Lock:</b> ${segment.attributes.wazeFeature._wmeObject.getLockRank() + 1}`;
-                showTooltip = true;
+            catch {
+                output += "No address<br>";
             }
-            const tooltipDiv = $("#wazemyTooltip");
-            if (showTooltip === true) {
-                let positions = [];
-                positions = document
-                    .querySelector(".wz-map-ol-control-span-mouse-position")
-                    .innerHTML.split(" ");
-                let pixel = this.sdk.Map.getPixelFromLonLat({
-                    lonLat: {
-                        lat: parseFloat(positions[0]),
-                        lon: parseFloat(positions[1]),
-                    },
-                });
-                const tw = tooltipDiv.innerWidth();
-                const th = tooltipDiv.innerHeight();
-                let tooltipX = pixel.x + window.scrollX + 15;
-                let tooltipY = pixel.y + window.scrollY + 15;
-                // Handle cases where tooltip is too near the edge.
-                if (tooltipX + tw > W.map.$map.innerWidth()) {
-                    tooltipX -= tw + 20; // 20 = scroll bar size
-                    if (tooltipX < 0) {
-                        tooltipX = 0;
-                    }
-                }
-                if (tooltipY + th > W.map.$map.innerHeight()) {
-                    tooltipY -= th + 20;
-                    if (tooltipY < 0) {
-                        tooltipY = 0;
-                    }
-                }
-                tooltipDiv.html(output);
-                tooltipDiv.css("top", `${tooltipY}px`);
-                tooltipDiv.css("left", `${tooltipX}px`);
-                tooltipDiv.css("visibility", "visible");
+            output += `<b>Lock:</b> ${landmark.attributes.wazeFeature._wmeObject.getLockRank() + 1}`;
+            showTooltip = true;
+        }
+        else if (segment) {
+            const segmentId = segment.attributes.wazeFeature.id;
+            const address = segment.attributes.wazeFeature._wmeObject.getAddress();
+            output = `<b>${address.getStreetName()}</b><br>`;
+            const altStreets = address.getAltStreets();
+            for (let i = 0; i < altStreets.length; i++) {
+                const altStreetName = altStreets[i].getStreetName();
+                output += `Alt: ${altStreetName}<br>`;
             }
-            else {
-                tooltipDiv.css("visibility", "hidden");
+            output += `${address.getCityName()}, ${address.getStateName()}<br>`;
+            output += `<b>ID:</b> ${segmentId}<br>`;
+            const direction = segment.attributes.wazeFeature._wmeObject.getDirection();
+            switch (direction) {
+                case 1:
+                    output += `<b>Direction:</b> A -> B<br>`;
+                    break;
+                case 2:
+                    output += `<b>Direction:</b> B -> A<br>`;
+                    break;
+                case 3:
+                    output += `<b>Direction:</b> Two way<br>`;
+                    break;
             }
+            output += `<b>Lock:</b> ${segment.attributes.wazeFeature._wmeObject.getLockRank() + 1}`;
+            showTooltip = true;
+        }
+        const tooltipDiv = $("#wazemyTooltip");
+        if (showTooltip === true) {
+            let positions = [];
+            positions = document
+                .querySelector(".wz-map-ol-control-span-mouse-position")
+                .innerHTML.split(" ");
+            let pixel = sdk.Map.getPixelFromLonLat({
+                lonLat: {
+                    lat: parseFloat(positions[0]),
+                    lon: parseFloat(positions[1]),
+                },
+            });
+            const tw = tooltipDiv.innerWidth();
+            const th = tooltipDiv.innerHeight();
+            let tooltipX = pixel.x + window.scrollX + 15;
+            let tooltipY = pixel.y + window.scrollY + 15;
+            // Handle cases where tooltip is too near the edge.
+            if (tooltipX + tw > W.map.$map.innerWidth()) {
+                tooltipX -= tw + 20; // 20 = scroll bar size
+                if (tooltipX < 0) {
+                    tooltipX = 0;
+                }
+            }
+            if (tooltipY + th > W.map.$map.innerHeight()) {
+                tooltipY -= th + 20;
+                if (tooltipY < 0) {
+                    tooltipY = 0;
+                }
+            }
+            tooltipDiv.html(output);
+            tooltipDiv.css("top", `${tooltipY}px`);
+            tooltipDiv.css("left", `${tooltipX}px`);
+            tooltipDiv.css("visibility", "visible");
+        }
+        else {
+            tooltipDiv.css("visibility", "hidden");
         }
     }
 }
