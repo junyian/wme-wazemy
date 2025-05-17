@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name        WME WazeMY
 // @namespace   https://www.github.com/junyian/
-// @version     2025.05.08.01
+// @version     2025.05.17.01
 // @author      junyianl <junyian@gmail.com>
 // @source      https://github.com/junyian/wme-wazemy
 // @license     MIT
@@ -714,24 +714,14 @@ function showTooltip() {
         const landmark = W.map.venueLayer.getFeatureBy("renderIntent", "highlight");
         const segment = W.map.segmentLayer.getFeatureBy("renderIntent", "highlight");
         if (landmark) {
-            output = `<b>${landmark.attributes.wazeFeature._wmeObject.attributes.name}</b><br>`;
-            const categories = landmark.attributes.wazeFeature._wmeObject.getCategories();
-            output += `<i>[${categories.join(", ")}]</i><br>`;
-            const address = landmark.attributes.wazeFeature._wmeObject.getAddress();
-            try {
-                output += address.getHouseNumber()
-                    ? `${address.getHouseNumber()}, `
-                    : "";
-                output += address.getStreetName()
-                    ? `${address.getStreetName()}<br>`
-                    : `No street<br>`;
-                output += `${address.getCityName()}, `;
-                output += `${address.getStateName()}<br>`;
-            }
-            catch {
-                output += "No address<br>";
-            }
-            output += `<b>Lock:</b> ${landmark.attributes.wazeFeature._wmeObject.getLockRank() + 1}`;
+            const venue = sdk.DataModel.Venues.getById({ venueId: landmark.attributes.wazeFeature.id });
+            output = venue.name ? `<b>${venue.name}</b><br>` : "";
+            output += `<i>[${venue.categories.join(", ")}]</i><br>`;
+            const venueAddress = sdk.DataModel.Venues.getAddress({ venueId: landmark.attributes.wazeFeature.id });
+            output += venueAddress.houseNumber ? `${venueAddress.houseNumber}, ` : "";
+            output += venueAddress.street.name ? `${venueAddress.street.name}<br>` : "";
+            output += `${venueAddress.city.name}, ${venueAddress.state.name}<br>`;
+            output += `<b>Lock:</b> ${venue.lockRank + 1}`;
             showTooltip = true;
         }
         else if (segment) {
