@@ -109,31 +109,24 @@ function showTooltip(): void {
       "renderIntent",
       "highlight",
     );
+
     const segment = W.map.segmentLayer.getFeatureBy(
       "renderIntent",
       "highlight",
     );
     if (landmark) {
-      output = `<b>${landmark.attributes.wazeFeature._wmeObject.attributes.name}</b><br>`;
+      const venue = sdk.DataModel.Venues.getById({ venueId: landmark.attributes.wazeFeature.id });
 
-      const categories =
-        landmark.attributes.wazeFeature._wmeObject.getCategories();
-      output += `<i>[${categories.join(", ")}]</i><br>`;
+      output = venue.name ? `<b>${venue.name}</b><br>` : "";
 
-      const address = landmark.attributes.wazeFeature._wmeObject.getAddress();
-      try {
-        output += address.getHouseNumber()
-          ? `${address.getHouseNumber()}, `
-          : "";
-        output += address.getStreetName()
-          ? `${address.getStreetName()}<br>`
-          : `No street<br>`;
-        output += `${address.getCityName()}, `;
-        output += `${address.getStateName()}<br>`;
-      } catch {
-        output += "No address<br>";
-      }
-      output += `<b>Lock:</b> ${landmark.attributes.wazeFeature._wmeObject.getLockRank() + 1}`;
+      output += `<i>[${venue.categories.join(", ")}]</i><br>`;
+
+      const venueAddress = sdk.DataModel.Venues.getAddress({ venueId: landmark.attributes.wazeFeature.id });
+      output += venueAddress.houseNumber ? `${venueAddress.houseNumber}, ` : "";
+      output += venueAddress.street.name ? `${venueAddress.street.name}<br>` : "";
+      output += `${venueAddress.city.name}, ${venueAddress.state.name}<br>`;
+
+      output += `<b>Lock:</b> ${venue.lockRank + 1}`;
       showTooltip = true;
     } else if (segment) {
       const segmentId = segment.attributes.wazeFeature.id;
