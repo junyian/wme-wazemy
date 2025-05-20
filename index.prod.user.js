@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name        WME WazeMY
 // @namespace   https://www.github.com/junyian/
-// @version     2025.05.17.01
+// @version     2025.05.20.01
 // @author      junyianl <junyian@gmail.com>
 // @source      https://github.com/junyian/wme-wazemy
 // @license     MIT
@@ -726,28 +726,26 @@ function showTooltip() {
         }
         else if (segment) {
             const segmentId = segment.attributes.wazeFeature.id;
-            const address = segment.attributes.wazeFeature._wmeObject.getAddress();
-            output = `<b>${address.getStreetName()}</b><br>`;
-            const altStreets = address.getAltStreets();
+            const segmentData = sdk.DataModel.Segments.getById({ segmentId: segmentId });
+            const address = sdk.DataModel.Segments.getAddress({ segmentId: segmentId });
+            output = address.street.name ? `<b>${address.street.name}</b><br>` : "";
+            const altStreets = address.altStreets;
             for (let i = 0; i < altStreets.length; i++) {
-                const altStreetName = altStreets[i].getStreetName();
+                const altStreetName = altStreets[i].street.name;
                 output += `Alt: ${altStreetName}<br>`;
             }
-            output += `${address.getCityName()}, ${address.getStateName()}<br>`;
+            output += `${address.city.name}, ${address.state.name}<br>`;
             output += `<b>ID:</b> ${segmentId}<br>`;
-            const direction = segment.attributes.wazeFeature._wmeObject.getDirection();
-            switch (direction) {
-                case 1:
-                    output += `<b>Direction:</b> A -> B<br>`;
-                    break;
-                case 2:
-                    output += `<b>Direction:</b> B -> A<br>`;
-                    break;
-                case 3:
-                    output += `<b>Direction:</b> Two way<br>`;
-                    break;
+            if (segmentData.isTwoWay) {
+                output += `<b>Direction:</b> Two way<br>`;
             }
-            output += `<b>Lock:</b> ${segment.attributes.wazeFeature._wmeObject.getLockRank() + 1}`;
+            else if (segmentData.isAtoB) {
+                output += `<b>Direction:</b> A -> B<br>`;
+            }
+            else if (segmentData.isBtoA) {
+                output += `<b>Direction:</b> B -> A<br>`;
+            }
+            output += `<b>Lock:</b> ${segmentData.lockRank + 1}`;
             showTooltip = true;
         }
         const tooltipDiv = $("#wazemyTooltip");
