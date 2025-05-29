@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name        WME WazeMY
 // @namespace   https://www.github.com/junyian/
-// @version     2024.11.29.01
+// @version     2025.05.20.01
 // @author      junyianl <junyian@gmail.com>
 // @source      https://github.com/junyian/wme-wazemy
 // @license     MIT
@@ -11,6 +11,7 @@
 // @require     https://greasyfork.org/scripts/449165-wme-wazemy-trafcamlist/code/wme-wazemy-trafcamlist.js
 // @grant       GM_xmlhttpRequest
 // @grant       GM.xmlHttpRequest
+// @grant       unsafeWindow
 // @connect     p3.fgies.com
 // @connect     p4.fgies.com
 // @connect     t2.fgies.com
@@ -502,8 +503,6 @@ module.exports = styleTagTransform;
 /******/ 	
 /************************************************************************/
 var __webpack_exports__ = {};
-// This entry need to be wrapped in an IIFE because it need to be isolated against other modules in the chunk.
-(() => {
 
 // EXTERNAL MODULE: ./node_modules/style-loader/dist/runtime/injectStylesIntoStyleTag.js
 var injectStylesIntoStyleTag = __webpack_require__("./node_modules/style-loader/dist/runtime/injectStylesIntoStyleTag.js");
@@ -525,7 +524,7 @@ var styleTagTransform = __webpack_require__("./node_modules/style-loader/dist/ru
 var styleTagTransform_default = /*#__PURE__*/__webpack_require__.n(styleTagTransform);
 // EXTERNAL MODULE: ./node_modules/css-loader/dist/cjs.js!./node_modules/less-loader/dist/cjs.js!./src/style/main.less
 var main = __webpack_require__("./node_modules/css-loader/dist/cjs.js!./node_modules/less-loader/dist/cjs.js!./src/style/main.less");
-;// CONCATENATED MODULE: ./src/style/main.less
+;// ./src/style/main.less
 
       
       
@@ -552,7 +551,7 @@ var update = injectStylesIntoStyleTag_default()(main/* default */.A, options);
 
        /* harmony default export */ const style_main = (main/* default */.A && main/* default */.A.locals ? main/* default */.A.locals : undefined);
 
-;// CONCATENATED MODULE: ./src/SettingsStorage.ts
+;// ./src/SettingsStorage.ts
 class SettingsStorage {
     /**
      * Initializes a new instance of the SettingsStorage class with the specified storage key.
@@ -618,11 +617,12 @@ class SettingsStorage {
 }
 SettingsStorage.instance = new SettingsStorage("WME_wazemySettings");
 
-;// CONCATENATED MODULE: ./src/plugins/PluginTooltip.ts
+;// ./src/plugins/PluginTooltip.ts
 
 
 class PluginTooltip {
-    constructor() {
+    constructor(sdk) {
+        this.sdk = sdk;
         this.initialize();
     }
     /**
@@ -659,7 +659,11 @@ class PluginTooltip {
      * @return {void} This function does not return anything.
      */
     enable() {
-        WazeWrap.Events.register("mousemove", null, this.showTooltip);
+        // WazeWrap.Events.register("mousemove", null, this.showTooltip.bind(this));
+        this.sdk.Events.on({
+            eventName: "wme-map-mouse-move",
+            eventHandler: showTooltip,
+        });
         $("#wazemyTooltip").show();
         console.log("[WazeMY] PluginTooltip enabled.");
     }
@@ -669,7 +673,11 @@ class PluginTooltip {
      * @return {void} This function does not return anything.
      */
     disable() {
-        WazeWrap.Events.unregister("mousemove", null, this.showTooltip);
+        // WazeWrap.Events.unregister("mousemove", null, this.showTooltip);
+        this.sdk.Events.off({
+            eventName: "wme-map-mouse-move",
+            eventHandler: showTooltip,
+        });
         $("#wazemyTooltip").hide();
         console.log("[WazeMY] PluginTooltip disabled.");
     }
@@ -688,86 +696,102 @@ class PluginTooltip {
         }
         console.log("[WazeMY] PluginTooltip settings updated.", settings);
     }
-    /**
-     * Shows the tooltip at the mouse position.
-     *
-     * @param {MouseEvent} e - The mouse event.
-     * @return {void} This function does not return anything.
-     */
-    showTooltip(e) {
-        let output = "";
-        let showTooltip = false;
-        // Manual check of settings because unregistering event is not working.
-        if ($("#wazemySettings_tooltip_enable").prop("checked") === true) {
-            const landmark = W.map.venueLayer.getFeatureBy("renderIntent", "highlight");
-            const segment = W.map.segmentLayer.getFeatureBy("renderIntent", "highlight");
-            if (landmark) {
-                output = `<b>${landmark.attributes.wazeFeature._wmeObject.attributes.name}</b><br>`;
-                const address = landmark.attributes.wazeFeature._wmeObject.getAddress();
-                try {
-                    output += address.getHouseNumber()
-                        ? `${address.getHouseNumber()}, `
-                        : "";
-                    output += address.getStreetName()
-                        ? `${address.getStreetName()}<br>`
-                        : `No street<br>`;
-                    output += `${address.getCityName()}, `;
-                    output += `${address.getStateName()}<br>`;
-                }
-                catch {
-                    output += "No address<br>";
-                }
-                output += `<b>Lock:</b> ${landmark.attributes.wazeFeature._wmeObject.getLockRank() + 1}`;
-                showTooltip = true;
+}
+/**
+   * Shows the tooltip at the mouse position.
+   *
+   * @return {void} This function does not return anything.
+   */
+function showTooltip() {
+    let output = "";
+    let showTooltip = false;
+    const sdk = unsafeWindow.getWmeSdk({
+        scriptId: "wme-wazemy",
+        scriptName: "WazeMY",
+    });
+    // Manual check of settings because unregistering event is not working.
+    if ($("#wazemySettings_tooltip_enable").prop("checked") === true) {
+        const landmark = W.map.venueLayer.getFeatureBy("renderIntent", "highlight");
+        const segment = W.map.segmentLayer.getFeatureBy("renderIntent", "highlight");
+        if (landmark) {
+            const venue = sdk.DataModel.Venues.getById({ venueId: landmark.attributes.wazeFeature.id });
+            output = venue.name ? `<b>${venue.name}</b><br>` : "";
+            output += `<i>[${venue.categories.join(", ")}]</i><br>`;
+            const venueAddress = sdk.DataModel.Venues.getAddress({ venueId: landmark.attributes.wazeFeature.id });
+            output += venueAddress.houseNumber ? `${venueAddress.houseNumber}, ` : "";
+            output += venueAddress.street.name ? `${venueAddress.street.name}<br>` : "";
+            output += `${venueAddress.city.name}, ${venueAddress.state.name}<br>`;
+            output += `<b>Lock:</b> ${venue.lockRank + 1}`;
+            showTooltip = true;
+        }
+        else if (segment) {
+            const segmentId = segment.attributes.wazeFeature.id;
+            const segmentData = sdk.DataModel.Segments.getById({ segmentId: segmentId });
+            const address = sdk.DataModel.Segments.getAddress({ segmentId: segmentId });
+            output = address.street.name ? `<b>${address.street.name}</b><br>` : "";
+            const altStreets = address.altStreets;
+            for (let i = 0; i < altStreets.length; i++) {
+                const altStreetName = altStreets[i].street.name;
+                output += `Alt: ${altStreetName}<br>`;
             }
-            else if (segment) {
-                const segmentId = segment.attributes.wazeFeature.id;
-                const address = segment.attributes.wazeFeature._wmeObject.getAddress();
-                output = `<b>${address.getStreetName()}</b><br>`;
-                const altStreets = address.getAltStreets();
-                for (let i = 0; i < altStreets.length; i++) {
-                    const altStreetName = altStreets[i].getStreetName();
-                    output += `Alt: ${altStreetName}<br>`;
-                }
-                output += `${address.getCityName()}, ${address.getStateName()}<br>`;
-                output += `<b>ID:</b> ${segmentId}<br>`;
-                output += `<b>Lock:</b> ${segment.attributes.wazeFeature._wmeObject.getLockRank() + 1}`;
-                showTooltip = true;
+            output += `${address.city.name}, ${address.state.name}<br>`;
+            output += `<b>ID:</b> ${segmentId}<br>`;
+            if (segmentData.isTwoWay) {
+                output += `<b>Direction:</b> Two way<br>`;
             }
-            const tooltipDiv = $("#wazemyTooltip");
-            if (showTooltip === true) {
-                const tw = tooltipDiv.innerWidth();
-                const th = tooltipDiv.innerHeight();
-                let tooltipX = e.clientX + window.scrollX + 15;
-                let tooltipY = e.clientY + window.scrollY + 15;
-                // Handle cases where tooltip is too near the edge.
-                if (tooltipX + tw > W.map.$map.innerWidth()) {
-                    tooltipX -= tw + 20; // 20 = scroll bar size
-                    if (tooltipX < 0) {
-                        tooltipX = 0;
-                    }
-                }
-                if (tooltipY + th > W.map.$map.innerHeight()) {
-                    tooltipY -= th + 20;
-                    if (tooltipY < 0) {
-                        tooltipY = 0;
-                    }
-                }
-                tooltipDiv.html(output);
-                tooltipDiv.css("top", `${tooltipY}px`);
-                tooltipDiv.css("left", `${tooltipX}px`);
-                tooltipDiv.css("visibility", "visible");
+            else if (segmentData.isAtoB) {
+                output += `<b>Direction:</b> A -> B<br>`;
             }
-            else {
-                tooltipDiv.css("visibility", "hidden");
+            else if (segmentData.isBtoA) {
+                output += `<b>Direction:</b> B -> A<br>`;
             }
+            output += `<b>Lock:</b> ${segmentData.lockRank + 1}`;
+            showTooltip = true;
+        }
+        const tooltipDiv = $("#wazemyTooltip");
+        if (showTooltip === true) {
+            let positions = [];
+            positions = document
+                .querySelector(".wz-map-ol-control-span-mouse-position")
+                .innerHTML.split(" ");
+            let pixel = sdk.Map.getPixelFromLonLat({
+                lonLat: {
+                    lat: parseFloat(positions[0]),
+                    lon: parseFloat(positions[1]),
+                },
+            });
+            const tw = tooltipDiv.innerWidth();
+            const th = tooltipDiv.innerHeight();
+            let tooltipX = pixel.x + window.scrollX + 15;
+            let tooltipY = pixel.y + window.scrollY + 15;
+            // Handle cases where tooltip is too near the edge.
+            if (tooltipX + tw > W.map.$map.innerWidth()) {
+                tooltipX -= tw + 20; // 20 = scroll bar size
+                if (tooltipX < 0) {
+                    tooltipX = 0;
+                }
+            }
+            if (tooltipY + th > W.map.$map.innerHeight()) {
+                tooltipY -= th + 20;
+                if (tooltipY < 0) {
+                    tooltipY = 0;
+                }
+            }
+            tooltipDiv.html(output);
+            tooltipDiv.css("top", `${tooltipY}px`);
+            tooltipDiv.css("left", `${tooltipX}px`);
+            tooltipDiv.css("visibility", "visible");
+        }
+        else {
+            tooltipDiv.css("visibility", "hidden");
         }
     }
 }
 
-;// CONCATENATED MODULE: ./src/plugins/PluginCopyLatLon.ts
+;// ./src/plugins/PluginCopyLatLon.ts
 class PluginCopyLatLon {
-    constructor() {
+    constructor(sdk) {
+        this.sdk = sdk;
         this.initialize();
     }
     /**
@@ -787,7 +811,13 @@ class PluginCopyLatLon {
      * @return {void} This function does not return anything.
      */
     enable() {
-        new WazeWrap.Interface.Shortcut("WazeMY_latloncopy", "Copies lat/lon of mouse position to clipboard.", "wazemy", "WazeMY", "CA+c", this.copyLatLon, null).add();
+        const shortcut = {
+            callback: this.copyLatLon,
+            description: "Copy lat/lon of mouse position to clipboard.",
+            shortcutId: "WazeMY_latloncopy",
+            shortcutKeys: "CA+c",
+        };
+        this.sdk.Shortcuts.createShortcut(shortcut);
         console.log("[WazeMY] PluginCopyLatLon enabled.");
     }
     /**
@@ -812,12 +842,13 @@ class PluginCopyLatLon {
      * @return {void} This function does not return anything.
      */
     copyLatLon() {
+        console.log("[WazeMY] Copy lat/lon shortcut triggered.");
         const latlon = $(".wz-map-ol-control-span-mouse-position").text();
         navigator.clipboard.writeText(latlon);
     }
 }
 
-;// CONCATENATED MODULE: ./src/plugins/PluginTrafficCameras.ts
+;// ./src/plugins/PluginTrafficCameras.ts
 
 
 class PluginTrafficCameras {
@@ -1147,7 +1178,7 @@ class PluginTrafficCameras {
     }
 }
 
-;// CONCATENATED MODULE: ./src/plugins/PluginKVMR.ts
+;// ./src/plugins/PluginKVMR.ts
 
 
 class PluginKVMR {
@@ -1360,7 +1391,7 @@ class PluginKVMR {
     }
 }
 
-;// CONCATENATED MODULE: ./src/plugins/PluginZoomPic.ts
+;// ./src/plugins/PluginZoomPic.ts
 class PluginZoomPic {
     constructor() {
         this.initialize();
@@ -1412,7 +1443,7 @@ class PluginZoomPic {
     }
 }
 
-;// CONCATENATED MODULE: ./src/plugins/PluginPlaces.ts
+;// ./src/plugins/PluginPlaces.ts
 
 
 class PluginPlaces {
@@ -1736,7 +1767,7 @@ class PluginPlaces {
     }
 }
 
-;// CONCATENATED MODULE: ./src/PluginFactory.ts
+;// ./src/PluginFactory.ts
 
 
 
@@ -1744,12 +1775,12 @@ class PluginPlaces {
 
 
 class PluginFactory {
-    static createPlugin(pluginName) {
+    static createPlugin(pluginName, sdk) {
         switch (pluginName) {
             case "PluginTooltip":
-                return new PluginTooltip();
+                return new PluginTooltip(sdk);
             case "PluginCopyLatLon":
-                return new PluginCopyLatLon();
+                return new PluginCopyLatLon(sdk);
             case "PluginTrafficCameras":
                 return new PluginTrafficCameras();
             case "PluginKVMR":
@@ -1764,7 +1795,7 @@ class PluginFactory {
     }
 }
 
-;// CONCATENATED MODULE: ./src/PluginManager.ts
+;// ./src/PluginManager.ts
 
 
 class PluginManager {
@@ -1779,8 +1810,8 @@ class PluginManager {
      * @param {string} type - The type of plugin to create.
      * @return {void} This function does not return anything.
      */
-    addPlugin(key, type) {
-        const plugin = PluginFactory.createPlugin(type);
+    addPlugin(key, type, sdk) {
+        const plugin = PluginFactory.createPlugin(type, sdk);
         this.plugins[key] = plugin;
         const pluginSettings = this.settingsStorage.getSetting(key);
         if (pluginSettings) {
@@ -1837,50 +1868,59 @@ class PluginManager {
 }
 PluginManager.instance = new PluginManager(SettingsStorage.instance);
 
-;// CONCATENATED MODULE: ./src/index.ts
+;// ./src/index.ts
 
 
-const updateMessage = `PluginZoomPic: Fix broken link after WME update.` +
-    `PluginTooltip: Include alternate addresses for segments.`;
+const updateMessage = `Port script to WME SDK.`;
+var sdk;
 async function src_main() {
     console.log("[WazeMY] Script started");
-    document.addEventListener("wme-ready", initializeWazeMY, { once: true });
+    unsafeWindow.SDK_INITIALIZED.then(initScript);
+}
+function initScript() {
+    if (!unsafeWindow.getWmeSdk) {
+        throw new Error("WME SDK not available");
+    }
+    sdk = unsafeWindow.getWmeSdk({
+        scriptId: "wme-wazemy",
+        scriptName: "WazeMY",
+    });
+    sdk.Events.once({ eventName: "wme-ready" }).then(initializeWazeMY);
 }
 async function initializeWazeMY() {
     console.log("[WazeMY] WME ready");
-    const { tabLabel, tabPane } = W.userscripts.registerSidebarTab("wazemy");
-    tabLabel.innerHTML = "WazeMY";
-    tabLabel.title = "WazeMY";
-    tabPane.innerHTML = `<div>
-  <h4>WazeMY</h4>
-  <b>${GM_info.script.version}</b>
-</div>
-<fieldset class="wazemySettings">
-  <legend class="wazemySettingsLegend">
-    <h6>Settings</h6></legend>
-  <div id="wazemySettings_settings"></div>
-</fieldset>
-<fieldset class="wazemySettings">
-  <legend class="wazemySettingsLegend">
-  <h6>Shortcuts</h6></legend>
-  <div id="wazemySettings_shortcuts">
-  </div>
-</fieldset>`;
-    WazeWrap.Interface.ShowScriptUpdate("WME WazeMY", GM_info.script.version, updateMessage, "https://greasyfork.org/en/scripts/404584-wazemy", "javascript:alert('No forum available');");
-    const pluginManager = PluginManager.instance;
-    pluginManager.addPlugin("copylatlon", "PluginCopyLatLon");
-    pluginManager.addPlugin("tooltip", "PluginTooltip");
-    pluginManager.addPlugin("trafcam", "PluginTrafficCameras");
-    pluginManager.addPlugin("kvmr", "PluginKVMR");
-    pluginManager.addPlugin("zoompic", "PluginZoomPic");
-    pluginManager.addPlugin("places", "PluginPlaces");
+    sdk.Sidebar.registerScriptTab().then((sidebarResult) => {
+        sidebarResult.tabLabel.innerHTML = "WazeMY";
+        sidebarResult.tabLabel.title = "WazeMY";
+        sidebarResult.tabPane.innerHTML = `<div>
+        <h4>WazeMY</h4>
+        <b>${GM_info.script.version}</b>
+        </div>
+        <fieldset class="wazemySettings">
+        <legend class="wazemySettingsLegend">
+          <h6>Settings</h6></legend>
+        <div id="wazemySettings_settings"></div>
+        </fieldset>
+        <fieldset class="wazemySettings">
+        <legend class="wazemySettingsLegend">
+        <h6>Shortcuts</h6></legend>
+        <div id="wazemySettings_shortcuts">
+        </div>
+        </fieldset>`;
+        WazeWrap.Interface.ShowScriptUpdate("WME WazeMY", GM_info.script.version, updateMessage, "https://greasyfork.org/en/scripts/404584-wazemy", "javascript:alert('No forum available');");
+        const pluginManager = PluginManager.instance;
+        pluginManager.addPlugin("copylatlon", "PluginCopyLatLon", sdk);
+        pluginManager.addPlugin("tooltip", "PluginTooltip", sdk);
+        pluginManager.addPlugin("trafcam", "PluginTrafficCameras", sdk);
+        pluginManager.addPlugin("kvmr", "PluginKVMR", sdk);
+        pluginManager.addPlugin("zoompic", "PluginZoomPic", sdk);
+        pluginManager.addPlugin("places", "PluginPlaces", sdk);
+    });
 }
 src_main().catch((e) => {
     console.log("WazeMY: Bootstrap");
     console.log(e);
 });
-
-})();
 
 /******/ })()
 ;
