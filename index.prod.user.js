@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name        WME WazeMY
 // @namespace   https://www.github.com/junyian/
-// @version     2025.05.20.01
+// @version     2025.06.04.01
 // @author      junyianl <junyian@gmail.com>
 // @source      https://github.com/junyian/wme-wazemy
 // @license     MIT
@@ -1873,10 +1873,8 @@ PluginManager.instance = new PluginManager(SettingsStorage.instance);
 
 const updateMessage = `Port script to WME SDK.`;
 var sdk;
-async function src_main() {
-    console.log("[WazeMY] Script started");
-    unsafeWindow.SDK_INITIALIZED.then(initScript);
-}
+console.log("[WazeMY] Script started");
+unsafeWindow.SDK_INITIALIZED.then(initScript);
 function initScript() {
     if (!unsafeWindow.getWmeSdk) {
         throw new Error("WME SDK not available");
@@ -1887,26 +1885,27 @@ function initScript() {
     });
     sdk.Events.once({ eventName: "wme-ready" }).then(initializeWazeMY);
 }
-async function initializeWazeMY() {
+function initializeWazeMY() {
     console.log("[WazeMY] WME ready");
     sdk.Sidebar.registerScriptTab().then((sidebarResult) => {
         sidebarResult.tabLabel.innerHTML = "WazeMY";
         sidebarResult.tabLabel.title = "WazeMY";
-        sidebarResult.tabPane.innerHTML = `<div>
-        <h4>WazeMY</h4>
-        <b>${GM_info.script.version}</b>
-        </div>
+        sidebarResult.tabPane.innerHTML = `
+        <wz-section-header headline="WazeMY" size="section-header2" class="settings-header">
+          <wz-overline class="headline">WazeMY</wz-overline>
+        </wz-section-header>
+        <wz-overline class="headline">${GM_info.script.version}</wz-overline>
         <fieldset class="wazemySettings">
-        <legend class="wazemySettingsLegend">
-          <h6>Settings</h6></legend>
-        <div id="wazemySettings_settings"></div>
+          <legend class="wazemySettingsLegend">
+            <wz-label>Settings</wz-label></legend>
+          <div id="wazemySettings_settings"></div>
         </fieldset>
         <fieldset class="wazemySettings">
-        <legend class="wazemySettingsLegend">
-        <h6>Shortcuts</h6></legend>
-        <div id="wazemySettings_shortcuts">
-        </div>
-        </fieldset>`;
+          <legend class="wazemySettingsLegend">
+          <wz-label>Shortcuts</wz-label></legend>
+          <div id="wazemySettings_shortcuts"></div>
+        </fieldset>
+      `;
         WazeWrap.Interface.ShowScriptUpdate("WME WazeMY", GM_info.script.version, updateMessage, "https://greasyfork.org/en/scripts/404584-wazemy", "javascript:alert('No forum available');");
         const pluginManager = PluginManager.instance;
         pluginManager.addPlugin("copylatlon", "PluginCopyLatLon", sdk);
@@ -1917,10 +1916,6 @@ async function initializeWazeMY() {
         pluginManager.addPlugin("places", "PluginPlaces", sdk);
     });
 }
-src_main().catch((e) => {
-    console.log("WazeMY: Bootstrap");
-    console.log(e);
-});
 
 /******/ })()
 ;
