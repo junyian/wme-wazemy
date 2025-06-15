@@ -37,8 +37,8 @@ export default class PluginPlaces implements IPlugin {
    * @return {void} This function does not return anything.
    */
   initialize(): void {
-    const settingsHTML: string = `<input type="checkbox" id="wazemySettings_places_enable"/>
-      <label for="wazemySettings_places_enable">Enable Places</label>`;
+    const settingsHTML: string = `<div><input type="checkbox" id="wazemySettings_places_enable"/>
+      <label for="wazemySettings_places_enable">Enable Places</label></div>`;
     $("#wazemySettings_settings").append(settingsHTML);
 
     $("#wazemySettings_places_enable").on("change", () => {
