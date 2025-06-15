@@ -6,8 +6,11 @@ import SettingsStorage from "../SettingsStorage";
 export default class PluginTooltip implements IPlugin {
   private sdk: WmeSDK;
 
-  constructor(sdk: WmeSDK) {
-    this.sdk = sdk;
+  constructor() {
+    this.sdk = unsafeWindow.getWmeSdk({
+      scriptId: "wme-wazemy-tooltip",
+      scriptName: "WazeMY"
+    });
     this.initialize();
   }
 

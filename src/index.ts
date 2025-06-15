@@ -53,12 +53,12 @@ function initializeWazeMY() {
       );
       const pluginManager = PluginManager.instance;
 
-      pluginManager.addPlugin("copylatlon", "PluginCopyLatLon", sdk);
-      pluginManager.addPlugin("tooltip", "PluginTooltip", sdk);
-      pluginManager.addPlugin("trafcam", "PluginTrafficCameras", sdk);
-      pluginManager.addPlugin("kvmr", "PluginKVMR", sdk);
-      pluginManager.addPlugin("zoompic", "PluginZoomPic", sdk);
-      pluginManager.addPlugin("places", "PluginPlaces", sdk);
+      pluginManager.addPlugin("copylatlon", "PluginCopyLatLon");
+      pluginManager.addPlugin("tooltip", "PluginTooltip");
+      pluginManager.addPlugin("trafcam", "PluginTrafficCameras");
+      pluginManager.addPlugin("kvmr", "PluginKVMR");
+      pluginManager.addPlugin("zoompic", "PluginZoomPic");
+      pluginManager.addPlugin("places", "PluginPlaces");
     },
   );
 }

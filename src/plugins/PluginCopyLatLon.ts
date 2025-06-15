@@ -4,8 +4,11 @@ import { KeyboardShortcut, WmeSDK } from "wme-sdk-typings";
 export default class PluginCopyLatLon implements IPlugin {
   private sdk: WmeSDK;
 
-  constructor(sdk: WmeSDK) {
-    this.sdk = sdk;
+  constructor() {
+    this.sdk = unsafeWindow.getWmeSdk({
+      scriptId: "wme-wazemy-copylatlon",
+      scriptName: "WazeMY"
+    });
     this.initialize();
   }
 

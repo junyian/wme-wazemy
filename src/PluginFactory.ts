@@ -5,15 +5,14 @@ import PluginTrafficCameras from "./plugins/PluginTrafficCameras";
 import PluginKVMR from "./plugins/PluginKVMR";
 import PluginZoomPic from "./plugins/PluginZoomPic";
 import PluginPlaces from "./plugins/PluginPlaces";
-import { WmeSDK } from "wme-sdk-typings";
 
 export default class PluginFactory {
-  static createPlugin(pluginName: string, sdk: WmeSDK): IPlugin {
+  static createPlugin(pluginName: string): IPlugin {
     switch (pluginName) {
       case "PluginTooltip":
-        return new PluginTooltip(sdk);
+        return new PluginTooltip();
       case "PluginCopyLatLon":
-        return new PluginCopyLatLon(sdk);
+        return new PluginCopyLatLon();
       case "PluginTrafficCameras":
         return new PluginTrafficCameras();
       case "PluginKVMR":
