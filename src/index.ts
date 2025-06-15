@@ -26,6 +26,7 @@ function initializeWazeMY() {
 
   sdk.Sidebar.registerScriptTab().then(
     (sidebarResult: RegisterSidebarTabResult) => {
+
       sidebarResult.tabLabel.innerHTML = "WazeMY";
       sidebarResult.tabLabel.title = "WazeMY";
       sidebarResult.tabPane.innerHTML = `
@@ -33,16 +34,24 @@ function initializeWazeMY() {
           <wz-overline class="headline">WazeMY</wz-overline>
         </wz-section-header>
         <wz-overline class="headline">${GM_info.script.version}</wz-overline>
-        <fieldset class="wazemySettings">
-          <legend class="wazemySettingsLegend">
-            <wz-label>Settings</wz-label></legend>
-          <div id="wazemySettings_settings"></div>
-        </fieldset>
-        <fieldset class="wazemySettings">
-          <legend class="wazemySettingsLegend">
-          <wz-label>Shortcuts</wz-label></legend>
-          <div id="wazemySettings_shortcuts"></div>
-        </fieldset>
+        <div class="settings">
+          <div class="settings__form-group">
+            <fieldset class="wazemySettings">
+              <legend class="wazemySettingsLegend">
+                <wz-label>Settings</wz-label>
+              </legend>
+              <div id="wazemySettings_settings"></div>
+            </fieldset>
+          </div>
+          <div class="settings__form-group">
+            <fieldset class="wazemySettings">
+              <legend class="wazemySettingsLegend">
+                <wz-label>Shortcuts</wz-label>
+              </legend>
+              <div id="wazemySettings_shortcuts"></div>
+            </fieldset>
+          </div>
+        </div>
       `;
       WazeWrap.Interface.ShowScriptUpdate(
         "WME WazeMY",
