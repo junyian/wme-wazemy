@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name        WME WazeMY
 // @namespace   https://www.github.com/junyian/
-// @version     2025.06.04.01
+// @version     2025.06.15.01
 // @author      junyianl <junyian@gmail.com>
 // @source      https://github.com/junyian/wme-wazemy
 // @license     MIT
@@ -621,8 +621,11 @@ SettingsStorage.instance = new SettingsStorage("WME_wazemySettings");
 
 
 class PluginTooltip {
-    constructor(sdk) {
-        this.sdk = sdk;
+    constructor() {
+        this.sdk = unsafeWindow.getWmeSdk({
+            scriptId: "wme-wazemy-tooltip",
+            scriptName: "WazeMY"
+        });
         this.initialize();
     }
     /**
@@ -754,33 +757,37 @@ function showTooltip() {
             positions = document
                 .querySelector(".wz-map-ol-control-span-mouse-position")
                 .innerHTML.split(" ");
-            let pixel = sdk.Map.getPixelFromLonLat({
-                lonLat: {
-                    lat: parseFloat(positions[0]),
-                    lon: parseFloat(positions[1]),
-                },
-            });
-            const tw = tooltipDiv.innerWidth();
-            const th = tooltipDiv.innerHeight();
-            let tooltipX = pixel.x + window.scrollX + 15;
-            let tooltipY = pixel.y + window.scrollY + 15;
-            // Handle cases where tooltip is too near the edge.
-            if (tooltipX + tw > W.map.$map.innerWidth()) {
-                tooltipX -= tw + 20; // 20 = scroll bar size
-                if (tooltipX < 0) {
-                    tooltipX = 0;
+            const lat = parseFloat(positions[0]);
+            const lon = parseFloat(positions[1]);
+            if (lat >= 0 && lon >= 0) {
+                let pixel = sdk.Map.getPixelFromLonLat({
+                    lonLat: {
+                        lat: parseFloat(positions[0]),
+                        lon: parseFloat(positions[1]),
+                    },
+                });
+                const tw = tooltipDiv.innerWidth();
+                const th = tooltipDiv.innerHeight();
+                let tooltipX = pixel.x + window.scrollX + 15;
+                let tooltipY = pixel.y + window.scrollY + 15;
+                // Handle cases where tooltip is too near the edge.
+                if (tooltipX + tw > W.map.$map.innerWidth()) {
+                    tooltipX -= tw + 20; // 20 = scroll bar size
+                    if (tooltipX < 0) {
+                        tooltipX = 0;
+                    }
                 }
-            }
-            if (tooltipY + th > W.map.$map.innerHeight()) {
-                tooltipY -= th + 20;
-                if (tooltipY < 0) {
-                    tooltipY = 0;
+                if (tooltipY + th > W.map.$map.innerHeight()) {
+                    tooltipY -= th + 20;
+                    if (tooltipY < 0) {
+                        tooltipY = 0;
+                    }
                 }
+                tooltipDiv.html(output);
+                tooltipDiv.css("top", `${tooltipY}px`);
+                tooltipDiv.css("left", `${tooltipX}px`);
+                tooltipDiv.css("visibility", "visible");
             }
-            tooltipDiv.html(output);
-            tooltipDiv.css("top", `${tooltipY}px`);
-            tooltipDiv.css("left", `${tooltipX}px`);
-            tooltipDiv.css("visibility", "visible");
         }
         else {
             tooltipDiv.css("visibility", "hidden");
@@ -790,8 +797,11 @@ function showTooltip() {
 
 ;// ./src/plugins/PluginCopyLatLon.ts
 class PluginCopyLatLon {
-    constructor(sdk) {
-        this.sdk = sdk;
+    constructor() {
+        this.sdk = unsafeWindow.getWmeSdk({
+            scriptId: "wme-wazemy-copylatlon",
+            scriptName: "WazeMY"
+        });
         this.initialize();
     }
     /**
@@ -1775,12 +1785,12 @@ class PluginPlaces {
 
 
 class PluginFactory {
-    static createPlugin(pluginName, sdk) {
+    static createPlugin(pluginName) {
         switch (pluginName) {
             case "PluginTooltip":
-                return new PluginTooltip(sdk);
+                return new PluginTooltip();
             case "PluginCopyLatLon":
-                return new PluginCopyLatLon(sdk);
+                return new PluginCopyLatLon();
             case "PluginTrafficCameras":
                 return new PluginTrafficCameras();
             case "PluginKVMR":
@@ -1810,8 +1820,8 @@ class PluginManager {
      * @param {string} type - The type of plugin to create.
      * @return {void} This function does not return anything.
      */
-    addPlugin(key, type, sdk) {
-        const plugin = PluginFactory.createPlugin(type, sdk);
+    addPlugin(key, type) {
+        const plugin = PluginFactory.createPlugin(type);
         this.plugins[key] = plugin;
         const pluginSettings = this.settingsStorage.getSetting(key);
         if (pluginSettings) {
@@ -1895,25 +1905,33 @@ function initializeWazeMY() {
           <wz-overline class="headline">WazeMY</wz-overline>
         </wz-section-header>
         <wz-overline class="headline">${GM_info.script.version}</wz-overline>
-        <fieldset class="wazemySettings">
-          <legend class="wazemySettingsLegend">
-            <wz-label>Settings</wz-label></legend>
-          <div id="wazemySettings_settings"></div>
-        </fieldset>
-        <fieldset class="wazemySettings">
-          <legend class="wazemySettingsLegend">
-          <wz-label>Shortcuts</wz-label></legend>
-          <div id="wazemySettings_shortcuts"></div>
-        </fieldset>
+        <div class="settings">
+          <div class="settings__form-group">
+            <fieldset class="wazemySettings">
+              <legend class="wazemySettingsLegend">
+                <wz-label>Settings</wz-label>
+              </legend>
+              <div id="wazemySettings_settings"></div>
+            </fieldset>
+          </div>
+          <div class="settings__form-group">
+            <fieldset class="wazemySettings">
+              <legend class="wazemySettingsLegend">
+                <wz-label>Shortcuts</wz-label>
+              </legend>
+              <div id="wazemySettings_shortcuts"></div>
+            </fieldset>
+          </div>
+        </div>
       `;
         WazeWrap.Interface.ShowScriptUpdate("WME WazeMY", GM_info.script.version, updateMessage, "https://greasyfork.org/en/scripts/404584-wazemy", "javascript:alert('No forum available');");
         const pluginManager = PluginManager.instance;
-        pluginManager.addPlugin("copylatlon", "PluginCopyLatLon", sdk);
-        pluginManager.addPlugin("tooltip", "PluginTooltip", sdk);
-        pluginManager.addPlugin("trafcam", "PluginTrafficCameras", sdk);
-        pluginManager.addPlugin("kvmr", "PluginKVMR", sdk);
-        pluginManager.addPlugin("zoompic", "PluginZoomPic", sdk);
-        pluginManager.addPlugin("places", "PluginPlaces", sdk);
+        pluginManager.addPlugin("copylatlon", "PluginCopyLatLon");
+        pluginManager.addPlugin("tooltip", "PluginTooltip");
+        pluginManager.addPlugin("trafcam", "PluginTrafficCameras");
+        pluginManager.addPlugin("kvmr", "PluginKVMR");
+        pluginManager.addPlugin("zoompic", "PluginZoomPic");
+        pluginManager.addPlugin("places", "PluginPlaces");
     });
 }
 
