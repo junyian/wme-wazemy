@@ -162,36 +162,42 @@ function showTooltip(): void {
       positions = document
         .querySelector(".wz-map-ol-control-span-mouse-position")
         .innerHTML.split(" ");
-      let pixel = sdk.Map.getPixelFromLonLat({
-        lonLat: {
-          lat: parseFloat(positions[0]),
-          lon: parseFloat(positions[1]),
-        },
-      });
 
-      const tw = tooltipDiv.innerWidth();
-      const th = tooltipDiv.innerHeight();
+      const lat = parseFloat(positions[0]);
+      const lon = parseFloat(positions[1]);
 
-      let tooltipX = pixel.x + window.scrollX + 15;
-      let tooltipY = pixel.y + window.scrollY + 15;
+      if (lat >= 0 && lon >= 0) {
+        let pixel = sdk.Map.getPixelFromLonLat({
+          lonLat: {
+            lat: parseFloat(positions[0]),
+            lon: parseFloat(positions[1]),
+          },
+        });
 
-      // Handle cases where tooltip is too near the edge.
-      if (tooltipX + tw > W.map.$map.innerWidth()) {
-        tooltipX -= tw + 20; // 20 = scroll bar size
-        if (tooltipX < 0) {
-          tooltipX = 0;
+        const tw = tooltipDiv.innerWidth();
+        const th = tooltipDiv.innerHeight();
+
+        let tooltipX = pixel.x + window.scrollX + 15;
+        let tooltipY = pixel.y + window.scrollY + 15;
+
+        // Handle cases where tooltip is too near the edge.
+        if (tooltipX + tw > W.map.$map.innerWidth()) {
+          tooltipX -= tw + 20; // 20 = scroll bar size
+          if (tooltipX < 0) {
+            tooltipX = 0;
+          }
         }
-      }
-      if (tooltipY + th > W.map.$map.innerHeight()) {
-        tooltipY -= th + 20;
-        if (tooltipY < 0) {
-          tooltipY = 0;
+        if (tooltipY + th > W.map.$map.innerHeight()) {
+          tooltipY -= th + 20;
+          if (tooltipY < 0) {
+            tooltipY = 0;
+          }
         }
+        tooltipDiv.html(output);
+        tooltipDiv.css("top", `${tooltipY}px`);
+        tooltipDiv.css("left", `${tooltipX}px`);
+        tooltipDiv.css("visibility", "visible");
       }
-      tooltipDiv.html(output);
-      tooltipDiv.css("top", `${tooltipY}px`);
-      tooltipDiv.css("left", `${tooltipX}px`);
-      tooltipDiv.css("visibility", "visible");
     } else {
       tooltipDiv.css("visibility", "hidden");
     }
