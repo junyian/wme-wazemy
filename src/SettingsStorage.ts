@@ -40,7 +40,8 @@ export default class SettingsStorage {
    */
   updateSetting(key: string, value: any): void {
     const settings = this.loadSettings() || {};
-    settings[key] = value;
+    const newKey = Object.keys(value);
+    settings[key][newKey[0]] = value[newKey[0]]; // updates existing setting or adds a new one
     this.saveSettings(settings);
   }
 
