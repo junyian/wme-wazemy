@@ -20,6 +20,7 @@
   },
   "private": true,
   "dependencies": {
+    "@google/genai": "^1.5.1",
     "@trim21/gm-fetch": "^0.1.15",
     "jquery": "^3.7.1"
   },
