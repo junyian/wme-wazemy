@@ -588,7 +588,8 @@ class SettingsStorage {
      */
     updateSetting(key, value) {
         const settings = this.loadSettings() || {};
-        settings[key] = value;
+        const newKey = Object.keys(value);
+        settings[key][newKey[0]] = value[newKey[0]]; // updates existing setting or adds a new one
         this.saveSettings(settings);
     }
     /**
@@ -1489,8 +1490,8 @@ class PluginPlaces {
      * @return {void} This function does not return anything.
      */
     initialize() {
-        const settingsHTML = `<input type="checkbox" id="wazemySettings_places_enable"/>
-      <label for="wazemySettings_places_enable">Enable Places</label>`;
+        const settingsHTML = `<div><input type="checkbox" id="wazemySettings_places_enable"/>
+      <label for="wazemySettings_places_enable">Enable Places</label></div>`;
         $("#wazemySettings_settings").append(settingsHTML);
         $("#wazemySettings_places_enable").on("change", () => {
             PluginManager.instance.updatePluginSettings("places", {
