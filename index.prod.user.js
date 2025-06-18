@@ -625,7 +625,7 @@ class PluginTooltip {
     constructor() {
         this.sdk = unsafeWindow.getWmeSdk({
             scriptId: "wme-wazemy-tooltip",
-            scriptName: "WazeMY"
+            scriptName: "WazeMY",
         });
         this.initialize();
     }
@@ -702,10 +702,10 @@ class PluginTooltip {
     }
 }
 /**
-   * Shows the tooltip at the mouse position.
-   *
-   * @return {void} This function does not return anything.
-   */
+ * Shows the tooltip at the mouse position.
+ *
+ * @return {void} This function does not return anything.
+ */
 function showTooltip() {
     let output = "";
     let showTooltip = false;
@@ -718,20 +718,30 @@ function showTooltip() {
         const landmark = W.map.venueLayer.getFeatureBy("renderIntent", "highlight");
         const segment = W.map.segmentLayer.getFeatureBy("renderIntent", "highlight");
         if (landmark) {
-            const venue = sdk.DataModel.Venues.getById({ venueId: landmark.attributes.wazeFeature.id });
+            const venue = sdk.DataModel.Venues.getById({
+                venueId: landmark.attributes.wazeFeature.id,
+            });
             output = venue.name ? `<b>${venue.name}</b><br>` : "";
             output += `<i>[${venue.categories.join(", ")}]</i><br>`;
-            const venueAddress = sdk.DataModel.Venues.getAddress({ venueId: landmark.attributes.wazeFeature.id });
+            const venueAddress = sdk.DataModel.Venues.getAddress({
+                venueId: landmark.attributes.wazeFeature.id,
+            });
             output += venueAddress.houseNumber ? `${venueAddress.houseNumber}, ` : "";
-            output += venueAddress.street.name ? `${venueAddress.street.name}<br>` : "";
+            output += venueAddress.street.name
+                ? `${venueAddress.street.name}<br>`
+                : "";
             output += `${venueAddress.city.name}, ${venueAddress.state.name}<br>`;
             output += `<b>Lock:</b> ${venue.lockRank + 1}`;
             showTooltip = true;
         }
         else if (segment) {
             const segmentId = segment.attributes.wazeFeature.id;
-            const segmentData = sdk.DataModel.Segments.getById({ segmentId: segmentId });
-            const address = sdk.DataModel.Segments.getAddress({ segmentId: segmentId });
+            const segmentData = sdk.DataModel.Segments.getById({
+                segmentId: segmentId,
+            });
+            const address = sdk.DataModel.Segments.getAddress({
+                segmentId: segmentId,
+            });
             output = address.street.name ? `<b>${address.street.name}</b><br>` : "";
             const altStreets = address.altStreets;
             for (let i = 0; i < altStreets.length; i++) {
