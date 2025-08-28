@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name        WME WazeMY
 // @namespace   https://www.github.com/junyian/
-// @version     2025.08.29.01
+// @version     2025.08.29.02
 // @author      junyianl <junyian@gmail.com>
 // @source      https://github.com/junyian/wme-wazemy
 // @license     MIT
@@ -590,8 +590,7 @@ class SettingsStorage {
      */
     updateSetting(key, value) {
         const settings = this.loadSettings() || {};
-        const newKey = Object.keys(value);
-        settings[key][newKey[0]] = value[newKey[0]]; // updates existing setting or adds a new one
+        settings[key] = { ...(settings[key] || {}), ...value };
         this.saveSettings(settings);
     }
     /**
