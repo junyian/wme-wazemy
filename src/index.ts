@@ -2,7 +2,7 @@ import "./style/main.less";
 import PluginManager from "./PluginManager";
 import { WmeSDK } from "wme-sdk-typings";
 
-const updateMessage: string = `Port script to WME SDK.`;
+const updateMessage: string = `Port script to WME SDK and Gemini integration.`;
 
 var sdk: WmeSDK;
 
