@@ -26,7 +26,6 @@ function initializeWazeMY() {
 
   sdk.Sidebar.registerScriptTab().then(
     (sidebarResult: RegisterSidebarTabResult) => {
-
       sidebarResult.tabLabel.innerHTML = "WazeMY";
       sidebarResult.tabLabel.title = "WazeMY";
       sidebarResult.tabPane.innerHTML = `
@@ -51,6 +50,14 @@ function initializeWazeMY() {
               <div id="wazemySettings_shortcuts"></div>
             </fieldset>
           </div>
+          <div class="settings__form-group">
+            <fieldset class="wazemySettings">
+              <legend class="wazemySettingsLegend">
+                <wz-label>Gemini</wz-label>
+              </legend>
+              <div id="wazemySettings_gemini"></div>
+            </fieldset>
+          </div>
         </div>
       `;
       WazeWrap.Interface.ShowScriptUpdate(
@@ -68,7 +75,7 @@ function initializeWazeMY() {
       pluginManager.addPlugin("kvmr", "PluginKVMR");
       pluginManager.addPlugin("zoompic", "PluginZoomPic");
       pluginManager.addPlugin("places", "PluginPlaces");
+      pluginManager.addPlugin("gemini", "PluginGemini");
     },
   );
 }
-

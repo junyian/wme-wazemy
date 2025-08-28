@@ -26,6 +26,8 @@ module.exports = {
     "t2.fgies.com",
     "jalanow.com",
     "llm.gov.my",
+    "venue-image.waze.com",
+    "generativelanguage.googleapis.com",
   ],
   "run-at": "document-end",
 };

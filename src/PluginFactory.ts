@@ -5,6 +5,7 @@ import PluginTrafficCameras from "./plugins/PluginTrafficCameras";
 import PluginKVMR from "./plugins/PluginKVMR";
 import PluginZoomPic from "./plugins/PluginZoomPic";
 import PluginPlaces from "./plugins/PluginPlaces";
+import PluginGemini from "./plugins/PluginGemini";
 
 export default class PluginFactory {
   static createPlugin(pluginName: string): IPlugin {
@@ -21,6 +22,8 @@ export default class PluginFactory {
         return new PluginZoomPic();
       case "PluginPlaces":
         return new PluginPlaces();
+      case "PluginGemini":
+        return new PluginGemini();
       default:
         throw new Error(`Unknown plugin: ${pluginName}`);
     }
