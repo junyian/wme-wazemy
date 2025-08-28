@@ -7,7 +7,7 @@ export default class PluginCopyLatLon implements IPlugin {
   constructor() {
     this.sdk = unsafeWindow.getWmeSdk({
       scriptId: "wme-wazemy-copylatlon",
-      scriptName: "WazeMY"
+      scriptName: "WazeMY",
     });
     this.initialize();
   }
