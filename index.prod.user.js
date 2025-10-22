@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name        WME WazeMY
 // @namespace   https://www.github.com/junyian/
-// @version     2025.08.29.02
+// @version     2025.10.22.1
 // @author      junyianl <junyian@gmail.com>
 // @source      https://github.com/junyian/wme-wazemy
 // @license     MIT
@@ -2160,7 +2160,7 @@ PluginManager.instance = new PluginManager(SettingsStorage.instance);
 ;// ./src/index.ts
 
 
-const updateMessage = `Port script to WME SDK and Gemini integration.`;
+const updateMessage = `Version 2025.10.22.1: Updated dependencies via npm update and ported script to WME SDK with Gemini integration.`;
 var sdk;
 console.log("[WazeMY] Script started");
 unsafeWindow.SDK_INITIALIZED.then(initScript);
