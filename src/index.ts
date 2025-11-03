@@ -2,7 +2,7 @@ import "./style/main.less";
 import PluginManager from "./PluginManager";
 import { WmeSDK } from "wme-sdk-typings";
 
-const updateMessage: string = `Version 2025.10.22.1: Updated dependencies via npm update and ported script to WME SDK with Gemini integration.`;
+const updateMessage: string = `Version 2025.11.03.1: Migrated PluginPlaces sidebar tabs to WME SDK for improved compatibility.`;
 
 var sdk: WmeSDK;
 
