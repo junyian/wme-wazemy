@@ -127,10 +127,12 @@ function showTooltip(): void {
         venueId: landmark.attributes.wazeFeature.id,
       });
       output += venueAddress.houseNumber ? `${venueAddress.houseNumber}, ` : "";
-      output += venueAddress.street.name
+      output += venueAddress.street?.name
         ? `${venueAddress.street.name}<br>`
         : "";
-      output += `${venueAddress.city.name}, ${venueAddress.state.name}<br>`;
+      if (venueAddress.city?.name && venueAddress.state?.name) {
+        output += `${venueAddress.city.name}, ${venueAddress.state.name}<br>`;
+      }
 
       output += `<b>Lock:</b> ${venue.lockRank + 1}`;
       showTooltip = true;
@@ -143,13 +145,17 @@ function showTooltip(): void {
         segmentId: segmentId,
       });
 
-      output = address.street.name ? `<b>${address.street.name}</b><br>` : "";
+      output = address.street?.name ? `<b>${address.street.name}</b><br>` : "";
       const altStreets = address.altStreets;
       for (let i = 0; i < altStreets.length; i++) {
-        const altStreetName = altStreets[i].street.name;
-        output += `Alt: ${altStreetName}<br>`;
+        const altStreetName = altStreets[i].street?.name;
+        if (altStreetName) {
+          output += `Alt: ${altStreetName}<br>`;
+        }
       }
-      output += `${address.city.name}, ${address.state.name}<br>`;
+      if (address.city?.name && address.state?.name) {
+        output += `${address.city.name}, ${address.state.name}<br>`;
+      }
       output += `<b>ID:</b> ${segmentId}<br>`;
       if (segmentData.isTwoWay) {
         output += `<b>Direction:</b> Two way<br>`;

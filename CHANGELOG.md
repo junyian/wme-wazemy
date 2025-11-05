@@ -1,5 +1,11 @@
 # Changelog
 
+## 2025.11.05.1
+
+*   Fixed map tooltip crash when hovering over places without complete address information
+    *   Added null checks for `city`, `state`, and `street` properties in venue and segment tooltips
+    *   Tooltip now gracefully handles missing address data instead of throwing errors
+
 ## 2025.11.03.1
 
 *   Migrated PluginPlaces sidebar tabs to WME SDK

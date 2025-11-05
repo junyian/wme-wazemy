@@ -2,7 +2,7 @@ import "./style/main.less";
 import PluginManager from "./PluginManager";
 import { WmeSDK } from "wme-sdk-typings";
 
-const updateMessage: string = `Version 2025.11.03.1: Migrated PluginPlaces sidebar tabs to WME SDK for improved compatibility.`;
+const updateMessage: string = `Version 2025.11.05.1: Fixed map tooltip crash when hovering over places without complete address information.`;
 
 var sdk: WmeSDK;
 
