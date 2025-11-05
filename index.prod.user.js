@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name        WME WazeMY
 // @namespace   https://www.github.com/junyian/
-// @version     2025.11.03.1
+// @version     2025.11.05.1
 // @author      junyianl <junyian@gmail.com>
 // @source      https://github.com/junyian/wme-wazemy
 // @license     MIT
@@ -728,10 +728,12 @@ function showTooltip() {
                 venueId: landmark.attributes.wazeFeature.id,
             });
             output += venueAddress.houseNumber ? `${venueAddress.houseNumber}, ` : "";
-            output += venueAddress.street.name
+            output += venueAddress.street?.name
                 ? `${venueAddress.street.name}<br>`
                 : "";
-            output += `${venueAddress.city.name}, ${venueAddress.state.name}<br>`;
+            if (venueAddress.city?.name && venueAddress.state?.name) {
+                output += `${venueAddress.city.name}, ${venueAddress.state.name}<br>`;
+            }
             output += `<b>Lock:</b> ${venue.lockRank + 1}`;
             showTooltip = true;
         }
@@ -743,13 +745,17 @@ function showTooltip() {
             const address = sdk.DataModel.Segments.getAddress({
                 segmentId: segmentId,
             });
-            output = address.street.name ? `<b>${address.street.name}</b><br>` : "";
+            output = address.street?.name ? `<b>${address.street.name}</b><br>` : "";
             const altStreets = address.altStreets;
             for (let i = 0; i < altStreets.length; i++) {
-                const altStreetName = altStreets[i].street.name;
-                output += `Alt: ${altStreetName}<br>`;
+                const altStreetName = altStreets[i].street?.name;
+                if (altStreetName) {
+                    output += `Alt: ${altStreetName}<br>`;
+                }
             }
-            output += `${address.city.name}, ${address.state.name}<br>`;
+            if (address.city?.name && address.state?.name) {
+                output += `${address.city.name}, ${address.state.name}<br>`;
+            }
             output += `<b>ID:</b> ${segmentId}<br>`;
             if (segmentData.isTwoWay) {
                 output += `<b>Direction:</b> Two way<br>`;
@@ -2176,7 +2182,7 @@ PluginManager.instance = new PluginManager(SettingsStorage.instance);
 ;// ./src/index.ts
 
 
-const updateMessage = `Version 2025.11.03.1: Migrated PluginPlaces sidebar tabs to WME SDK for improved compatibility.`;
+const updateMessage = `Version 2025.11.05.1: Fixed map tooltip crash when hovering over places without complete address information.`;
 var sdk;
 console.log("[WazeMY] Script started");
 unsafeWindow.SDK_INITIALIZED.then(initScript);
