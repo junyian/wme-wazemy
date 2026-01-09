@@ -17,6 +17,18 @@ const updateMessage: string = `Version 2025.11.05.1: Fixed map tooltip crash whe
 
 This ensures users see the correct update notification when the script loads in their browser.
 
+## Waze Map Editor SDK
+
+When interfacing with the Waze Map Editor, always refer to the **WME SDK** (Waze Map Editor Software Development Kit). The SDK provides the official APIs and interfaces for interacting with the editor.
+
+**SDK Documentation:** https://web-assets.waze.com/wme_sdk_docs/production/latest/index.html
+
+Use this documentation as the primary reference for:
+- Available APIs and their usage
+- Event handling and lifecycle hooks
+- Type definitions and interfaces
+- Best practices for WME script development
+
 ## Other Reminders
 
 - Run `npm run dev` during development to rebuild the script
