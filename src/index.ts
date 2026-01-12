@@ -2,7 +2,7 @@ import "./style/main.less";
 import PluginManager from "./PluginManager";
 import { WmeSDK } from "wme-sdk-typings";
 
-const updateMessage: string = `Version 2025.11.05.1: Fixed map tooltip crash when hovering over places without complete address information.`;
+const updateMessage: string = `Version 2026.01.13.1: Fixed full-size image display for Place Update Requests (PURs) by fetching via blob URL and displaying in a modal popup.`;
 
 var sdk: WmeSDK;
 

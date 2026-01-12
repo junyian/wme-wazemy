@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026.01.13.1
+
+*   Fixed full-size image display for Place Update Requests (PURs)
+    *   PUR images lack proper MIME types from the server, causing browsers to fail to display them
+    *   Now fetches images via GM_xmlhttpRequest and displays them in a draggable modal popup
+    *   Added loading indicator, close button (also Escape key), and drag functionality
+    *   Properly cleans up blob URLs to prevent memory leaks
+
 ## 2025.11.05.1
 
 *   Fixed map tooltip crash when hovering over places without complete address information
