@@ -108,6 +108,8 @@ function showTooltip(): void {
 
   // Manual check of settings because unregistering event is not working.
   if ($("#wazemySettings_tooltip_enable").prop("checked") === true) {
+    // W. object: SDK lacks feature query API for highlighted rendering
+    // Alternative would require re-architecting tooltip to use selection events
     const landmark = W.map.venueLayer.getFeatureBy("renderIntent", "highlight");
 
     const segment = W.map.segmentLayer.getFeatureBy(
@@ -194,13 +196,14 @@ function showTooltip(): void {
         let tooltipY = pixel.y + window.scrollY + 15;
 
         // Handle cases where tooltip is too near the edge.
-        if (tooltipX + tw > W.map.$map.innerWidth()) {
+        const mapElement = sdk.Map.getMapViewportElement();
+        if (tooltipX + tw > mapElement.offsetWidth) {
           tooltipX -= tw + 20; // 20 = scroll bar size
           if (tooltipX < 0) {
             tooltipX = 0;
           }
         }
-        if (tooltipY + th > W.map.$map.innerHeight()) {
+        if (tooltipY + th > mapElement.offsetHeight) {
           tooltipY -= th + 20;
           if (tooltipY < 0) {
             tooltipY = 0;

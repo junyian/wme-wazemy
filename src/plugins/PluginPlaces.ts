@@ -82,27 +82,29 @@ export default class PluginPlaces implements IPlugin {
       sidebarResult.tabPane.innerHTML = this.tabHTML;
 
       // Populate select options with polygons from KVMR.
-      const map = W.map.getLayersBy("uniqueName", "__KlangValley");
-      map[0].features.forEach((feature: any) => {
-        $("#wazemyPlaces_polygons").append(
-          $("<option>", {
-            value: feature.data.number,
-            text: feature.data.number,
-          }),
-        );
-      });
+      const kvmrLayer = PluginManager.instance.getLayer("__KlangValley");
+      if (kvmrLayer) {
+        kvmrLayer.features.forEach((feature: any) => {
+          $("#wazemyPlaces_polygons").append(
+            $("<option>", {
+              value: feature.data.number,
+              text: feature.data.number,
+            }),
+          );
+        });
+      }
 
       // Handle Scan button.
       $("#wazemyPlaces_scan").on("click", async () => {
         $("#wazemyPlaces_scanStatus").text("Scanning tiles.");
         $("#wazemyPlaces_venues > tbody").empty();
 
-        const map = W.map.getLayersBy("uniqueName", "__KlangValley");
-        if (map.length === 0) {
+        const kvmrLayer = PluginManager.instance.getLayer("__KlangValley");
+        if (!kvmrLayer) {
           console.log("[PluginPlaces] No KVMR layer found. Aborting scan.");
           return false;
         }
-        const mr = map[0].getFeaturesByAttribute(
+        const mr = kvmrLayer.getFeaturesByAttribute(
           "number",
           $("#wazemyPlaces_polygons option:selected")[0].innerText,
         );
@@ -113,7 +115,9 @@ export default class PluginPlaces implements IPlugin {
 
         const feature = mr[0];
         let bounds = feature.geometry.getBounds().clone();
-        bounds = bounds.transform(W.map.getProjectionObject(), "EPSG:4326");
+        const webMercator = new OpenLayers.Projection("EPSG:900913");
+        const wgs84 = new OpenLayers.Projection("EPSG:4326");
+        bounds = bounds.transform(webMercator, wgs84);
         const venues = await getAllVenues(bounds);
 
         let purCount = 0;
@@ -138,11 +142,12 @@ export default class PluginPlaces implements IPlugin {
             row.attr("id", `${lon}:${lat}:${venue.id}`);
             row.on("click", (e) => {
               const target = e.currentTarget.id.split(":"); // split to lon:lat:id
-              const xy = OpenLayers.Layer.SphericalMercator.forwardMercator(
-                parseFloat(target[0]),
-                parseFloat(target[1]),
-              );
-              W.map.setCenter(xy);
+              this.sdk.Map.setMapCenter({
+                lonLat: {
+                  lon: parseFloat(target[0]),
+                  lat: parseFloat(target[1]),
+                },
+              });
             });
 
             let purHTML = ``;

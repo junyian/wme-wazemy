@@ -2,7 +2,7 @@ import "./style/main.less";
 import PluginManager from "./PluginManager";
 import { WmeSDK } from "wme-sdk-typings";
 
-const updateMessage: string = `Version 2026.01.13.1: Fixed full-size image display for Place Update Requests (PURs) by fetching via blob URL and displaying in a modal popup.`;
+const updateMessage: string = `Version 2026.01.19.1: Migrated from W. object to WME SDK equivalents. Increased SDK adoption from ~20% to ~80%, reducing direct W. object usage from 22 to 4 instances.`;
 
 var sdk: WmeSDK;
 

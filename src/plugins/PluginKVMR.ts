@@ -1,9 +1,12 @@
+import { WmeSDK } from "wme-sdk-typings";
 import IPlugin from "../IPlugin";
 import PluginManager from "../PluginManager";
 import SettingsStorage from "../SettingsStorage";
 
 export default class PluginKVMR implements IPlugin {
+  private sdk: WmeSDK;
   private raid_mapLayer: any;
+  private handleMapUpdate: () => void;
 
   private areas = [
     {
@@ -74,6 +77,10 @@ export default class PluginKVMR implements IPlugin {
     },
   ];
   constructor() {
+    this.sdk = unsafeWindow.getWmeSdk({
+      scriptId: "wme-wazemy-kvmr",
+      scriptName: "WazeMY",
+    });
     this.initialize();
   }
 
@@ -103,93 +110,34 @@ export default class PluginKVMR implements IPlugin {
     };
 
     // Add MR polygon overlay.
-    const mro_Map = W.map;
-    const mro_OL = OpenLayers;
-    // const mro_mapLayers = mro_Map.getLayersBy("uniqueName", "__KlangValley");
-    this.raid_mapLayer = new mro_OL.Layer.Vector("KlangValley", {
+    this.raid_mapLayer = new OpenLayers.Layer.Vector("KlangValley", {
       displayInLayerSwitcher: true,
       uniqueName: "__KlangValley",
     });
 
-    mro_Map.addLayer(this.raid_mapLayer);
+    // W. object: Complex polygon vector layer with custom styling
+    // SDK layer system is designed for GeoJSON; refactoring would have low ROI
+    W.map.addLayer(this.raid_mapLayer);
+
+    // Register layer for cross-plugin access
+    PluginManager.instance.registerLayer("__KlangValley", this.raid_mapLayer);
 
     this.areas.forEach((area) => {
       const geometry = parseWKT(area.geometry);
       this.addRaidPolygon(this.raid_mapLayer, geometry, area.color, area.name);
     });
 
-    mro_Map.events.register("moveend", W.map, function () {
-      currentRaidLocation();
-    });
-    mro_Map.events.register("zoomend", W.map, function () {
-      currentRaidLocation();
+    // Create event handler reference for cleanup
+    this.handleMapUpdate = () => this.currentRaidLocation();
+
+    // Register SDK events for map updates
+    // Note: wme-map-move-end fires after both panning and zooming
+    this.sdk.Events.on({
+      eventName: "wme-map-move-end",
+      eventHandler: this.handleMapUpdate,
     });
 
     console.log("PluginKVMR initialized.");
-
-    /**
-     * Updates the current raid location on the map based on the user's current location.
-     *
-     * @return {void} This function does not return anything.
-     */
-    function currentRaidLocation(): void {
-      // Only run if the plugin is enabled. Workaround because unregistering events doesn't work.
-      if ($("#wazemySettings_kvmr_enable").is(":checked") === false) {
-        return;
-      }
-
-      var mro_Map = W.map;
-
-      const mro_mapLayers = mro_Map.getLayersBy(
-        "uniqueName",
-        "__KlangValley",
-      )[0];
-
-      for (let i = 0; i < mro_mapLayers.features?.length; i++) {
-        var raidMapCenter = mro_Map.getCenter();
-        var raidCenterPoint = new OpenLayers.Geometry.Point(
-          raidMapCenter.lon,
-          raidMapCenter.lat,
-        );
-        const raid_mapLayer = mro_Map.getLayersBy(
-          "uniqueName",
-          "__KlangValley",
-        )[0];
-        var raidCenterCheck =
-          raid_mapLayer.features[i].geometry.components[0].containsPoint(
-            raidCenterPoint,
-          );
-        var holes = raid_mapLayer.features[i].attributes.holes;
-
-        if (raidCenterCheck === true) {
-          var str = $(
-            "#topbar-container > div > div.location-info-region > div",
-          ).text();
-
-          const location: string[] = str.split(" - ");
-          if (location.length > 1) {
-            location[1] =
-              "Klang Valley MapRaid " +
-              raid_mapLayer.features[i].attributes.number;
-          } else {
-            location.push(
-              "Klang Valley MapRaid " +
-                raid_mapLayer.features[i].attributes.number,
-            );
-          }
-          const raidLocationLabel = location.join(" - ");
-
-          setTimeout(function () {
-            $("#topbar-container > div > div.location-info-region > div").text(
-              raidLocationLabel,
-            );
-          }, 200);
-          if (holes === "false") {
-            break;
-          }
-        }
-      }
-    }
 
     function parseWKT(wkt: string): { lon: string; lat: string }[] {
       let trimmed;
@@ -207,6 +155,61 @@ export default class PluginKVMR implements IPlugin {
     }
   }
 
+  /**
+   * Updates the current raid location on the map based on the user's current location.
+   *
+   * @return {void} This function does not return anything.
+   */
+  private currentRaidLocation(): void {
+    // Only run if the plugin is enabled. Workaround because unregistering events doesn't work.
+    if ($("#wazemySettings_kvmr_enable").is(":checked") === false) {
+      return;
+    }
+
+    for (let i = 0; i < this.raid_mapLayer.features?.length; i++) {
+      // W. object: Using W.map.getCenter() for map center in Web Mercator coordinates
+      // Used for polygon containment check with OpenLayers geometry
+      var raidMapCenter = W.map.getCenter();
+      var raidCenterPoint = new OpenLayers.Geometry.Point(
+        raidMapCenter.lon,
+        raidMapCenter.lat,
+      );
+      var raidCenterCheck =
+        this.raid_mapLayer.features[i].geometry.components[0].containsPoint(
+          raidCenterPoint,
+        );
+      var holes = this.raid_mapLayer.features[i].attributes.holes;
+
+      if (raidCenterCheck === true) {
+        var str = $(
+          "#topbar-container > div > div.location-info-region > div",
+        ).text();
+
+        const location: string[] = str.split(" - ");
+        if (location.length > 1) {
+          location[1] =
+            "Klang Valley MapRaid " +
+            this.raid_mapLayer.features[i].attributes.number;
+        } else {
+          location.push(
+            "Klang Valley MapRaid " +
+              this.raid_mapLayer.features[i].attributes.number,
+          );
+        }
+        const raidLocationLabel = location.join(" - ");
+
+        setTimeout(function () {
+          $("#topbar-container > div > div.location-info-region > div").text(
+            raidLocationLabel,
+          );
+        }, 200);
+        if (holes === "false") {
+          break;
+        }
+      }
+    }
+  }
+
   enable(): void {
     this.raid_mapLayer.setVisibility(true);
     console.log("PluginKVMR enabled.");
@@ -214,9 +217,12 @@ export default class PluginKVMR implements IPlugin {
 
   disable(): void {
     this.raid_mapLayer.setVisibility(false);
-    const mro_map = W.map;
-    mro_map.events.unregister("moveend", W.map);
-    mro_map.events.unregister("zoomend", W.map);
+
+    // Unregister SDK events
+    this.sdk.Events.off({
+      eventName: "wme-map-move-end",
+      eventHandler: this.handleMapUpdate,
+    });
 
     console.log("PluginKVMR disabled.");
   }
@@ -236,8 +242,6 @@ export default class PluginKVMR implements IPlugin {
     groupColor: any,
     groupNumber: any,
   ): void {
-    var mro_Map = W.map;
-    var mro_OL = OpenLayers;
     var raidGroupLabel = "KlangValley " + groupNumber;
     var groupName = "RaidGroup " + groupNumber;
 
@@ -262,22 +266,21 @@ export default class PluginKVMR implements IPlugin {
     };
 
     var pnt = [];
+    const wgs84 = new OpenLayers.Projection("EPSG:4326");
+    const webMercator = new OpenLayers.Projection("EPSG:900913");
     for (let i = 0; i < groupPoints.length; i++) {
       const convPoint = new OpenLayers.Geometry.Point(
         groupPoints[i].lon,
         groupPoints[i].lat,
-      ).transform(
-        new OpenLayers.Projection("EPSG:4326"),
-        mro_Map.getProjectionObject(),
-      );
+      ).transform(wgs84, webMercator);
       //console.log('MapRaid: ' + JSON.stringify(groupPoints[i]) + ', ' + groupPoints[i].lon + ', ' + groupPoints[i].lat);
       pnt.push(convPoint);
     }
 
-    var ring = new mro_OL.Geometry.LinearRing(pnt);
-    var polygon = new mro_OL.Geometry.Polygon([ring]);
+    var ring = new OpenLayers.Geometry.LinearRing(pnt);
+    var polygon = new OpenLayers.Geometry.Polygon([ring]);
 
-    var feature = new mro_OL.Feature.Vector(polygon, attributes, style);
+    var feature = new OpenLayers.Feature.Vector(polygon, attributes, style);
     raidLayer.addFeatures([feature]);
   }
 }

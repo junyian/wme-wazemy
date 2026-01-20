@@ -6,6 +6,7 @@ import SettingsStorage from "./SettingsStorage";
 export default class PluginManager {
   private plugins: { [key: string]: IPlugin } = {};
   private settingsStorage: SettingsStorage;
+  private layerRegistry: Map<string, any> = new Map();
   static instance: PluginManager;
 
   constructor(settings: SettingsStorage) {
@@ -78,6 +79,27 @@ export default class PluginManager {
       this.plugins[key].updateSettings(settings);
       this.settingsStorage.updateSetting(key, settings);
     }
+  }
+
+  /**
+   * Registers a layer in the layer registry for cross-plugin access.
+   *
+   * @param {string} name - The unique name of the layer.
+   * @param {any} layer - The layer object to register.
+   * @return {void} This function does not return anything.
+   */
+  public registerLayer(name: string, layer: any): void {
+    this.layerRegistry.set(name, layer);
+  }
+
+  /**
+   * Retrieves a layer from the layer registry.
+   *
+   * @param {string} name - The unique name of the layer.
+   * @return {any} The layer object, or undefined if not found.
+   */
+  public getLayer(name: string): any {
+    return this.layerRegistry.get(name);
   }
 }
 

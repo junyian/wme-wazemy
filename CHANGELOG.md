@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026.01.19.1
+
+*   Migrated from W. object to WME SDK equivalents
+    *   Migrated PluginKVMR event system from `W.map.events` to SDK `Events.on()` and `Events.off()`
+    *   Migrated map viewport dimensions from `W.map.$map.innerWidth/Height()` to SDK `Map.getMapViewportElement()`
+    *   Migrated map center from `W.map.setCenter()` to SDK `Map.setMapCenter()`
+    *   Refactored projection transforms to use OpenLayers.Projection directly instead of `W.map.getProjectionObject()`
+    *   Implemented plugin layer registry in PluginManager for cross-plugin layer access
+    *   Documented remaining W. object usage where SDK lacks equivalent APIs
+    *   Reduced W. object instances from 22 to 4 (SDK adoption increased from ~20% to ~80%)
+
 ## 2026.01.13.1
 
 *   Fixed full-size image display for Place Update Requests (PURs)
