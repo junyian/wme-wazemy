@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026.01.21.1
+
+*   Refactored PluginTooltip to use WME SDK layer events
+    *   Replaced W. object queries (`W.map.venueLayer.getFeatureBy()` and `W.map.segmentLayer.getFeatureBy()`) with SDK layer events
+    *   Implemented `wme-layer-feature-mouse-enter` and `wme-layer-feature-mouse-leave` event handlers
+    *   Added proper layer event tracking for segments and venues using `sdk.Events.trackLayerEvents()`
+    *   Improved efficiency by using event-driven approach instead of polling on every mouse move
+    *   Fixed event unregistering issues with proper state management
+    *   Reduced W. object instances from 4 to 2 (SDK adoption increased from ~80% to ~90%)
+
 ## 2026.01.19.1
 
 *   Migrated from W. object to WME SDK equivalents
