@@ -2,6 +2,7 @@ import IPlugin from "../IPlugin";
 import PluginManager from "../PluginManager";
 import SettingsStorage from "../SettingsStorage";
 import { WmeSDK } from "wme-sdk-typings";
+import { formatRelativeTime, formatFullDate } from "../utils/dateUtils";
 
 export default class PluginPlaces implements IPlugin {
   private sdk: WmeSDK;
@@ -23,6 +24,7 @@ export default class PluginPlaces implements IPlugin {
         <thead>
           <tr>
             <th title="I=Image\nN=New Place\nU=Update\nF=Flag\nD=Delete">PUR</th>
+            <th>Date</th>
             <th>L</th>
             <th>Name</th>
             <th>Errors</th>
@@ -120,15 +122,154 @@ export default class PluginPlaces implements IPlugin {
         bounds = bounds.transform(webMercator, wgs84);
         const venues = await getAllVenues(bounds);
 
-        let purCount = 0;
-        let totalCount = 0;
+        // Helper functions defined once
+        function evaluateVenue(venue: any): {
+          priority: 0 | 1 | 2 | 3;
+          errors: string[];
+        } {
+          let status: { priority: 0 | 1 | 2 | 3; errors: string[] } = {
+            priority: 0,
+            errors: [],
+          };
+          // Rule #1
+          if (typeof venue.name == "undefined") {
+            if (!venue.categories.includes("RESIDENCE_HOME")) {
+              status.priority = 3;
+              status.errors.push("Missing name.");
+            }
+          } else {
+            // Rule: Check name for all uppercase.
+            if (venue.name === venue.name.toUpperCase()) {
+              status.priority = 3;
+              status.errors.push("Name is uppercase.");
+            }
+
+            // Rule: Check name for all lowercase.
+            if (venue.name === venue.name.toLowerCase()) {
+              status.priority = 3;
+              status.errors.push("Name is lowercase.");
+            }
+          }
+
+          // Rule: Min lock is not set.
+          if (venue.lockRank === 0) {
+            status.priority = 3;
+            status.errors.push("Min lock not set.");
+          }
+
+          // Rule: Phone number format.
+          if (venue.phone) {
+            if (
+              /^[\d]{3}-[\d]{3} [\d]{4}$/.test(venue.phone) === false &&
+              /^[\d]{3}-[\d]{4} [\d]{4}$/.test(venue.phone) === false &&
+              /^[\d]{2}-[\d]{4} [\d]{4}$/.test(venue.phone) === false &&
+              /^[\d]{2}-[\d]{3} [\d]{4}$/.test(venue.phone) === false &&
+              /^[\d]{3}-[\d]{3} [\d]{3}$/.test(venue.phone) === false &&
+              /^[\d]{1}-[\d]{3}-[\d]{2}-[\d]{4}$/.test(venue.phone) === false
+            ) {
+              status.priority = 2;
+              status.errors.push("Phone number format incorrect.");
+            }
+          }
+
+          // Rule: Category specific rank locks.
+          if (
+            (venue.categories.includes("CHARGING_STATION") &&
+              venue.lockRank < 3) ||
+            (venue.categories.includes("GAS_STATION") && venue.lockRank < 3) ||
+            (venue.categories.includes("AIRPORT") && venue.lockRank < 4) ||
+            (venue.categories.includes("BUS_STATION") && venue.lockRank < 2) ||
+            (venue.categories.includes("FERRY_PIER") && venue.lockRank < 2) ||
+            (venue.categories.includes("JUNCTION_INTERCHANGE") &&
+              venue.lockRank < 2) ||
+            (venue.categories.includes("REST_AREAS") && venue.lockRank < 2) ||
+            (venue.categories.includes("SEAPORT_MARINA_HARBOR") &&
+              venue.lockRank < 2) ||
+            (venue.categories.includes("TRAIN_STATION") &&
+              venue.lockRank < 2) ||
+            (venue.categories.includes("TUNNEL") && venue.lockRank < 2) ||
+            (venue.categories.includes("CITY_HALL") && venue.lockRank < 2) ||
+            (venue.categories.includes("COLLEGE_UNIVERSITY") &&
+              venue.lockRank < 2) ||
+            (venue.categories.includes("COURTHOUSE") && venue.lockRank < 2) ||
+            (venue.categories.includes("DOCTOR_CLINIC") &&
+              venue.lockRank < 2) ||
+            (venue.categories.includes("EMBASSY_CONSULATE") &&
+              venue.lockRank < 2) ||
+            (venue.categories.includes("FIRE_DEPARTMENT") &&
+              venue.lockRank < 2) ||
+            (venue.categories.includes("HOSPITAL_URGENT_CARE") &&
+              venue.lockRank < 3) ||
+            (venue.categories.includes("LIBRARY") && venue.lockRank < 2) ||
+            (venue.categories.includes("MILITARY") && venue.lockRank < 3) ||
+            (venue.categories.includes("POLICE_STATION") &&
+              venue.lockRank < 2) ||
+            (venue.categories.includes("PRISON_CORRECTIONAL_FACILITY") &&
+              venue.lockRank < 2) ||
+            (venue.categories.includes("RELIGIOUS_CENTER") &&
+              venue.lockRank < 3) ||
+            (venue.categories.includes("SCHOOL") && venue.lockRank < 2) ||
+            (venue.categories.includes("BANK_FINANCIAL") &&
+              venue.lockRank < 2) ||
+            (venue.categories.includes("SHOPPING_CENTER") &&
+              venue.lockRank < 2) ||
+            (venue.categories.includes("MUSEUM") && venue.lockRank < 2) ||
+            (venue.categories.includes("RACING_TRACK") && venue.lockRank < 2) ||
+            (venue.categories.includes("STADIUM_ARENA") &&
+              venue.lockRank < 2) ||
+            (venue.categories.includes("THEME_PARK") && venue.lockRank < 2) ||
+            (venue.categories.includes("TOURIST_ATTRACTION_HISTORIC_SITE") &&
+              venue.lockRank < 2) ||
+            (venue.categories.includes("ZOO_AQUARIUM") && venue.lockRank < 2) ||
+            (venue.categories.includes("BEACH") && venue.lockRank < 2) ||
+            (venue.categories.includes("GOLF_COURSE") && venue.lockRank < 2) ||
+            (venue.categories.includes("PARK") && venue.lockRank < 2) ||
+            (venue.categories.includes("FOREST_GROVE") && venue.lockRank < 2) ||
+            (venue.categories.includes("ISLAND") && venue.lockRank < 4) ||
+            (venue.categories.includes("RIVER_STREAM") && venue.lockRank < 3) ||
+            (venue.categories.includes("SEA_LAKE_POOL") &&
+              venue.lockRank < 5) ||
+            (venue.categories.includes("CANAL") && venue.lockRank < 2) ||
+            (venue.categories.includes("SWAMP_MARSH") && venue.lockRank < 2)
+          ) {
+            status.priority = 2;
+            status.errors.push("Min lock incorrect.");
+          }
+          return status;
+        }
+
+        function checkPURstatus(venue: any): boolean {
+          return venue.venueUpdateRequests?.length > 0;
+        }
+
+        function getPURDate(venue: any): number | null {
+          if (venue.venueUpdateRequests?.length > 0) {
+            // Try dateAdded first, fallback to createdOn
+            return (
+              venue.venueUpdateRequests[0].dateAdded ||
+              venue.venueUpdateRequests[0].createdOn ||
+              null
+            );
+          }
+          return null;
+        }
+
+        // Collect and filter venues
+        interface ProcessedVenue {
+          venue: any;
+          status: { priority: 0 | 1 | 2 | 3; errors: string[] };
+          isPUR: boolean;
+          purDate: number | null;
+          lon: number;
+          lat: number;
+        }
+
+        const processedVenues: ProcessedVenue[] = [];
 
         venues.forEach((venue: any) => {
-          // Check venue against rules.
           const status = evaluateVenue(venue);
-          const isPUR: boolean = checkPURstatus(venue);
+          const isPUR = checkPURstatus(venue);
           if (status.priority > 0 || isPUR) {
-            // Add venue to table.
             let lon = 0;
             let lat = 0;
             if (venue.geometry.type === "Polygon") {
@@ -138,187 +279,102 @@ export default class PluginPlaces implements IPlugin {
               lon = venue.geometry.coordinates[0];
               lat = venue.geometry.coordinates[1];
             }
-            const row = $("<tr>");
-            row.attr("id", `${lon}:${lat}:${venue.id}`);
-            row.on("click", (e) => {
-              const target = e.currentTarget.id.split(":"); // split to lon:lat:id
-              this.sdk.Map.setMapCenter({
-                lonLat: {
-                  lon: parseFloat(target[0]),
-                  lat: parseFloat(target[1]),
-                },
-              });
+            processedVenues.push({
+              venue,
+              status,
+              isPUR,
+              purDate: getPURDate(venue),
+              lon,
+              lat,
             });
+          }
+        });
 
-            let purHTML = ``;
-            if (isPUR) {
-              purCount++;
-              if (venue.approved === false) {
-                purHTML = `<td align="center">N</td>`;
-              } else if (venue.venueUpdateRequests[0].type === "REQUEST") {
-                if (venue.venueUpdateRequests[0].subType === "FLAG") {
-                  purHTML = `<td align="center">F</td>`;
-                } else if (venue.venueUpdateRequests[0].subType === "UPDATE") {
-                  purHTML = `<td align="center">U</td>`;
-                } else if (venue.venueUpdateRequests[0].subType === "DELETE") {
-                  purHTML = `<td align="center">D</td>`;
-                } else {
-                  purHTML = `<td align="center">+</td>`;
-                }
-              } else if (venue.venueUpdateRequests[0].type === "IMAGE") {
-                purHTML = `<td align="center">I</td>`;
+        // Sort: PURs first (newest to oldest), then non-PURs
+        processedVenues.sort((a, b) => {
+          // PURs come first
+          if (a.isPUR && !b.isPUR) return -1;
+          if (!a.isPUR && b.isPUR) return 1;
+          // Both are PURs: sort by date descending (newest first)
+          if (a.isPUR && b.isPUR) {
+            const dateA = a.purDate || 0;
+            const dateB = b.purDate || 0;
+            return dateB - dateA;
+          }
+          // Both are non-PURs: keep original order
+          return 0;
+        });
+
+        // Render sorted venues
+        let purCount = 0;
+        let totalCount = 0;
+
+        processedVenues.forEach((pv) => {
+          const { venue, status, isPUR, purDate, lon, lat } = pv;
+
+          const row = $("<tr>");
+          row.attr("id", `${lon}:${lat}:${venue.id}`);
+          row.on("click", (e) => {
+            const target = e.currentTarget.id.split(":"); // split to lon:lat:id
+            this.sdk.Map.setMapCenter({
+              lonLat: {
+                lon: parseFloat(target[0]),
+                lat: parseFloat(target[1]),
+              },
+            });
+          });
+
+          // PUR type column
+          let purHTML = ``;
+          if (isPUR) {
+            purCount++;
+            if (venue.approved === false) {
+              purHTML = `<td align="center">N</td>`;
+            } else if (venue.venueUpdateRequests[0].type === "REQUEST") {
+              if (venue.venueUpdateRequests[0].subType === "FLAG") {
+                purHTML = `<td align="center">F</td>`;
+              } else if (venue.venueUpdateRequests[0].subType === "UPDATE") {
+                purHTML = `<td align="center">U</td>`;
+              } else if (venue.venueUpdateRequests[0].subType === "DELETE") {
+                purHTML = `<td align="center">D</td>`;
               } else {
                 purHTML = `<td align="center">+</td>`;
               }
+            } else if (venue.venueUpdateRequests[0].type === "IMAGE") {
+              purHTML = `<td align="center">I</td>`;
             } else {
-              purHTML = `<td></td>`;
+              purHTML = `<td align="center">+</td>`;
             }
-            row.append(purHTML);
-
-            const levelHTML = `<td>${venue.lockRank ? venue.lockRank + 1 : 1}</td>`;
-            row.append(levelHTML);
-
-            const colHTML = `<td>${venue.name}</td>`;
-            row.append(colHTML);
-
-            const errorsHTML = `<td>${status.errors.join("\r\n")}</td>`;
-            row.append(errorsHTML);
-
-            $("#wazemyPlaces_venues > tbody").append(row);
-            totalCount++;
+          } else {
+            purHTML = `<td></td>`;
           }
+          row.append(purHTML);
 
-          $("#wazemyPlaces_purCount").text(`# PUR = ${purCount}`);
-          $("#wazemyPlaces_totalCount").text(`# total = ${totalCount}`);
-          $("#wazemyPlaces_scanStatus").text("");
-
-          function evaluateVenue(venue: any): any {
-            let status: { priority: 0 | 1 | 2 | 3; errors: string[] } = {
-              priority: 0,
-              errors: [],
-            };
-            // Rule #1
-            if (typeof venue.name == "undefined") {
-              if (!venue.categories.includes("RESIDENCE_HOME")) {
-                status.priority = 3;
-                status.errors.push("Missing name.");
-              }
-            } else {
-              // Rule: Check name for all uppercase.
-              if (venue.name === venue.name.toUpperCase()) {
-                status.priority = 3;
-                status.errors.push("Name is uppercase.");
-              }
-
-              // Rule: Check name for all lowercase.
-              if (venue.name === venue.name.toLowerCase()) {
-                status.priority = 3;
-                status.errors.push("Name is lowercase.");
-              }
-            }
-
-            // Rule: Min lock is not set.
-            if (venue.lockRank === 0) {
-              status.priority = 3;
-              status.errors.push("Min lock not set.");
-            }
-
-            // Rule: Phone number format.
-            if (venue.phone) {
-              if (
-                /^[\d]{3}-[\d]{3} [\d]{4}$/.test(venue.phone) === false &&
-                /^[\d]{3}-[\d]{4} [\d]{4}$/.test(venue.phone) === false &&
-                /^[\d]{2}-[\d]{4} [\d]{4}$/.test(venue.phone) === false &&
-                /^[\d]{2}-[\d]{3} [\d]{4}$/.test(venue.phone) === false &&
-                /^[\d]{3}-[\d]{3} [\d]{3}$/.test(venue.phone) === false &&
-                /^[\d]{1}-[\d]{3}-[\d]{2}-[\d]{4}$/.test(venue.phone) === false
-              ) {
-                status.priority = 2;
-                status.errors.push("Phone number format incorrect.");
-              }
-            }
-
-            // Rule: Category specific rank locks.
-            if (
-              (venue.categories.includes("CHARGING_STATION") &&
-                venue.lockRank < 3) ||
-              (venue.categories.includes("GAS_STATION") &&
-                venue.lockRank < 3) ||
-              (venue.categories.includes("AIRPORT") && venue.lockRank < 4) ||
-              (venue.categories.includes("BUS_STATION") &&
-                venue.lockRank < 2) ||
-              (venue.categories.includes("FERRY_PIER") && venue.lockRank < 2) ||
-              (venue.categories.includes("JUNCTION_INTERCHANGE") &&
-                venue.lockRank < 2) ||
-              (venue.categories.includes("REST_AREAS") && venue.lockRank < 2) ||
-              (venue.categories.includes("SEAPORT_MARINA_HARBOR") &&
-                venue.lockRank < 2) ||
-              (venue.categories.includes("TRAIN_STATION") &&
-                venue.lockRank < 2) ||
-              (venue.categories.includes("TUNNEL") && venue.lockRank < 2) ||
-              (venue.categories.includes("CITY_HALL") && venue.lockRank < 2) ||
-              (venue.categories.includes("COLLEGE_UNIVERSITY") &&
-                venue.lockRank < 2) ||
-              (venue.categories.includes("COURTHOUSE") && venue.lockRank < 2) ||
-              (venue.categories.includes("DOCTOR_CLINIC") &&
-                venue.lockRank < 2) ||
-              (venue.categories.includes("EMBASSY_CONSULATE") &&
-                venue.lockRank < 2) ||
-              (venue.categories.includes("FIRE_DEPARTMENT") &&
-                venue.lockRank < 2) ||
-              (venue.categories.includes("HOSPITAL_URGENT_CARE") &&
-                venue.lockRank < 3) ||
-              (venue.categories.includes("LIBRARY") && venue.lockRank < 2) ||
-              (venue.categories.includes("MILITARY") && venue.lockRank < 3) ||
-              (venue.categories.includes("POLICE_STATION") &&
-                venue.lockRank < 2) ||
-              (venue.categories.includes("PRISON_CORRECTIONAL_FACILITY") &&
-                venue.lockRank < 2) ||
-              (venue.categories.includes("RELIGIOUS_CENTER") &&
-                venue.lockRank < 3) ||
-              (venue.categories.includes("SCHOOL") && venue.lockRank < 2) ||
-              (venue.categories.includes("BANK_FINANCIAL") &&
-                venue.lockRank < 2) ||
-              (venue.categories.includes("SHOPPING_CENTER") &&
-                venue.lockRank < 2) ||
-              (venue.categories.includes("MUSEUM") && venue.lockRank < 2) ||
-              (venue.categories.includes("RACING_TRACK") &&
-                venue.lockRank < 2) ||
-              (venue.categories.includes("STADIUM_ARENA") &&
-                venue.lockRank < 2) ||
-              (venue.categories.includes("THEME_PARK") && venue.lockRank < 2) ||
-              (venue.categories.includes("TOURIST_ATTRACTION_HISTORIC_SITE") &&
-                venue.lockRank < 2) ||
-              (venue.categories.includes("ZOO_AQUARIUM") &&
-                venue.lockRank < 2) ||
-              (venue.categories.includes("BEACH") && venue.lockRank < 2) ||
-              (venue.categories.includes("GOLF_COURSE") &&
-                venue.lockRank < 2) ||
-              (venue.categories.includes("PARK") && venue.lockRank < 2) ||
-              (venue.categories.includes("FOREST_GROVE") &&
-                venue.lockRank < 2) ||
-              (venue.categories.includes("ISLAND") && venue.lockRank < 4) ||
-              (venue.categories.includes("RIVER_STREAM") &&
-                venue.lockRank < 3) ||
-              (venue.categories.includes("SEA_LAKE_POOL") &&
-                venue.lockRank < 5) ||
-              (venue.categories.includes("CANAL") && venue.lockRank < 2) ||
-              (venue.categories.includes("SWAMP_MARSH") && venue.lockRank < 2)
-            ) {
-              status.priority = 2;
-              status.errors.push("Min lock incorrect.");
-            }
-            return status;
+          // Date column
+          let dateHTML = `<td></td>`;
+          if (isPUR && purDate) {
+            const relativeTime = formatRelativeTime(purDate);
+            const fullDate = formatFullDate(purDate);
+            dateHTML = `<td title="${fullDate}">${relativeTime}</td>`;
           }
+          row.append(dateHTML);
 
-          function checkPURstatus(venue: any): boolean {
-            if (venue.venueUpdateRequests?.length > 0) {
-              return true;
-            } else {
-              return false;
-            }
-          }
+          const levelHTML = `<td>${venue.lockRank ? venue.lockRank + 1 : 1}</td>`;
+          row.append(levelHTML);
+
+          const colHTML = `<td>${venue.name}</td>`;
+          row.append(colHTML);
+
+          const errorsHTML = `<td>${status.errors.join("\r\n")}</td>`;
+          row.append(errorsHTML);
+
+          $("#wazemyPlaces_venues > tbody").append(row);
+          totalCount++;
         });
+
+        $("#wazemyPlaces_purCount").text(`# PUR = ${purCount}`);
+        $("#wazemyPlaces_totalCount").text(`# total = ${totalCount}`);
+        $("#wazemyPlaces_scanStatus").text("");
 
         async function getAllVenues(bounds: any) {
           let venues: any = [];

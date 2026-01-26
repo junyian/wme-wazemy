@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026.01.25.1
+
+*   Added reverse-chronological sorting for URs and PURs
+    *   New PluginURs: Sidebar panel displaying editable Update Requests sorted newest first
+    *   Filter URs to only show editable ones using `isEditable` property
+    *   URs display type, severity (color-coded), relative date, and status
+    *   Click any UR row to center map on that location
+    *   Auto-refresh on map data loaded event
+    *   Enhanced PluginPlaces: PURs now sorted newest first with new "Date" column
+    *   Added shared date utilities for relative time formatting (e.g., "2 hours ago")
+
 ## 2026.01.21.1
 
 *   Refactored PluginTooltip to use WME SDK layer events

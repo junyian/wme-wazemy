@@ -2,7 +2,7 @@ import "./style/main.less";
 import PluginManager from "./PluginManager";
 import { WmeSDK } from "wme-sdk-typings";
 
-const updateMessage: string = `Version 2026.01.21.1: Refactored PluginTooltip to use WME SDK layer events. Replaced W. object queries with event-driven approach, reducing W. object usage from 4 to 2 instances.`;
+const updateMessage: string = `Version 2026.01.25.1: Added UR panel with reverse-chronological sorting (newest first). Enhanced Places scan to sort PURs by date with new Date column.`;
 
 var sdk: WmeSDK;
 
@@ -75,6 +75,7 @@ function initializeWazeMY() {
       pluginManager.addPlugin("kvmr", "PluginKVMR");
       pluginManager.addPlugin("zoompic", "PluginZoomPic");
       pluginManager.addPlugin("places", "PluginPlaces");
+      pluginManager.addPlugin("urs", "PluginURs");
       pluginManager.addPlugin("gemini", "PluginGemini");
     },
   );

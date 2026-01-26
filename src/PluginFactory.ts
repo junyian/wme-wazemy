@@ -6,6 +6,7 @@ import PluginKVMR from "./plugins/PluginKVMR";
 import PluginZoomPic from "./plugins/PluginZoomPic";
 import PluginPlaces from "./plugins/PluginPlaces";
 import PluginGemini from "./plugins/PluginGemini";
+import PluginURs from "./plugins/PluginURs";
 
 export default class PluginFactory {
   static createPlugin(pluginName: string): IPlugin {
@@ -24,6 +25,8 @@ export default class PluginFactory {
         return new PluginPlaces();
       case "PluginGemini":
         return new PluginGemini();
+      case "PluginURs":
+        return new PluginURs();
       default:
         throw new Error(`Unknown plugin: ${pluginName}`);
     }
