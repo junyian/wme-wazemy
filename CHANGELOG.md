@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026.01.29.1
+
+*   Improved Gemini image evaluation performance
+    *   Added debounced click handler to prevent redundant evaluations on rapid clicks
+    *   Added image URL caching to skip re-evaluation when the same image is already displayed
+    *   Fixed binary-to-base64 conversion to use ArrayBuffer instead of responseText for correct and efficient encoding
+    *   Disabled Gemini thinking mode (`thinkingBudget: 0`) for faster image evaluation responses
+    *   Enabled structured JSON output via `responseMimeType` to eliminate markdown code fence parsing
+    *   Simplified prompt to reduce input token count
+
 ## 2026.01.25.1
 
 *   Added reverse-chronological sorting for URs and PURs

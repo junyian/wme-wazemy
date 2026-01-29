@@ -2,7 +2,7 @@ import "./style/main.less";
 import PluginManager from "./PluginManager";
 import { WmeSDK } from "wme-sdk-typings";
 
-const updateMessage: string = `Version 2026.01.25.1: Added UR panel with reverse-chronological sorting (newest first). Enhanced Places scan to sort PURs by date with new Date column.`;
+const updateMessage: string = `Version 2026.01.29.1: Improved Gemini image evaluation performance with debounced click handling, image caching, proper binary-to-base64 conversion, and faster API responses.`;
 
 var sdk: WmeSDK;
 
