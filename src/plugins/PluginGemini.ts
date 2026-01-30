@@ -4,7 +4,7 @@ import SettingsStorage from "../SettingsStorage";
 import { WmeSDK } from "wme-sdk-typings";
 
 // Mapping from Gemini violation codes to WME rejection reason values
-const VIOLATION_TO_WME_REASON: Record<string, string> = {
+export const VIOLATION_TO_WME_REASON: Record<string, string> = {
   IRRELEVANT_IMAGE: "7", // Not relevant / wrong place
   LOW_QUALITY: "3", // Low quality
   INAPPROPRIATE_CONTENT: "4", // Offensive
@@ -17,16 +17,19 @@ const VIOLATION_TO_WME_REASON: Record<string, string> = {
   OTHER_GENERAL_ISSUE: "8", // Other
 };
 
+// Gemini evaluation result interface
+export interface GeminiEvaluationResult {
+  suggestion: "Approve" | "Reject";
+  reason: string;
+  violations: string[];
+}
+
 export default class PluginGemini implements IPlugin {
   private sdk: WmeSDK;
   private geminiApiKey: string;
   private lastEvaluatedImageSrc: string | null = null;
   private evaluateDebounceTimer: ReturnType<typeof setTimeout> | null = null;
-  private lastEvaluationResult: {
-    suggestion: string;
-    reason: string;
-    violations: string[];
-  } | null = null;
+  private lastEvaluationResult: GeminiEvaluationResult | null = null;
 
   /**
    * Constructs a new instance of the PluginGemini class.
@@ -162,13 +165,6 @@ export default class PluginGemini implements IPlugin {
           $("#gemini").append(
             `<b>Violations:</b><ul>${evaluationText.violations.map((v: string) => `<li>${v}</li>`).join("")}</ul>`,
           );
-          // Add Quick Reject button
-          $("#gemini").append(
-            `<wz-button id="gemini-quick-reject" color="secondary" size="sm">Quick Reject</wz-button>`,
-          );
-          $("#gemini-quick-reject").on("click", () => {
-            this.performQuickReject();
-          });
         }
       });
     };
@@ -315,105 +311,49 @@ Decision Logic:
   }
 
   /**
-   * Performs quick rejection of the current PUR image using WME's reject functionality.
-   * Maps Gemini violations to WME rejection reasons and triggers the rejection.
+   * Evaluates an image from a URL using Gemini AI.
+   * This method can be called by other plugins (e.g., PluginPlaces).
+   *
+   * @param imageUrl - The URL of the image to evaluate
+   * @returns Promise resolving to the evaluation result
    */
-  private performQuickReject(): void {
-    if (!this.lastEvaluationResult || this.lastEvaluationResult.suggestion !== "Reject") {
-      console.log("[WazeMY] No rejection to perform - evaluation is not a reject.");
-      return;
-    }
-
-    // Determine the WME rejection reason from the first violation
-    const violations = this.lastEvaluationResult.violations || [];
-    const primaryViolation = violations[0] || "OTHER_GENERAL_ISSUE";
-    const wmeReasonValue = VIOLATION_TO_WME_REASON[primaryViolation] || "8";
-
-    // Find and click the WME reject button
-    // The reject button in WME PUR review is typically a wz-button with specific text or class
-    const rejectButton = $(
-      'wz-button[color="secondary"]:contains("Reject"), ' +
-      'wz-button.reject-button, ' +
-      'button:contains("Reject"):not(#gemini-quick-reject)'
-    ).first();
-
-    if (rejectButton.length === 0) {
-      console.log("[WazeMY] Could not find WME reject button.");
-      this.showQuickRejectStatus("Could not find reject button", "error");
-      return;
-    }
-
-    // Click the reject button to open the rejection dialog
-    rejectButton[0].click();
-
-    // Wait for the dialog to appear and then select the reason
-    setTimeout(() => {
-      this.selectRejectionReasonAndSubmit(wmeReasonValue);
-    }, 300);
-  }
-
-  /**
-   * Selects the rejection reason in the WME dialog and submits the rejection.
-   */
-  private selectRejectionReasonAndSubmit(reasonValue: string): void {
-    // Find the rejection reason dropdown/select
-    const reasonSelect = $(
-      'wz-select[name="annotationType"], ' +
-      'select[name="annotationType"], ' +
-      '.rejection-reason select, ' +
-      'wz-select.rejection-reason'
-    ).first();
-
-    if (reasonSelect.length > 0) {
-      // Set the value on the select element
-      const selectElement = reasonSelect[0] as HTMLSelectElement;
-      if (selectElement.tagName.toLowerCase() === "wz-select") {
-        // For wz-select custom element
-        (selectElement as any).value = reasonValue;
-        selectElement.dispatchEvent(new Event("change", { bubbles: true }));
-      } else {
-        // For standard select element
-        selectElement.value = reasonValue;
-        $(selectElement).trigger("change");
+  evaluateImageFromUrl(imageUrl: string): Promise<GeminiEvaluationResult> {
+    return new Promise((resolve, reject) => {
+      if (!this.geminiApiKey) {
+        reject(new Error("Gemini API key is not set."));
+        return;
       }
-    }
 
-    // Wait a moment then click the submit/confirm button
-    setTimeout(() => {
-      const submitButton = $(
-        'wz-button:contains("Submit"), ' +
-        'wz-button:contains("Confirm"), ' +
-        'wz-button[color="primary"]:visible, ' +
-        'button:contains("Submit"):visible'
-      ).first();
+      GM_xmlhttpRequest({
+        method: "GET",
+        url: imageUrl,
+        responseType: "arraybuffer",
+        onload: (response: any) => {
+          const bytes = new Uint8Array(response.response);
+          let binary = "";
+          for (let i = 0; i < bytes.byteLength; i++) {
+            binary += String.fromCharCode(bytes[i]);
+          }
+          const base64data = btoa(binary);
 
-      if (submitButton.length > 0) {
-        submitButton[0].click();
-        this.showQuickRejectStatus("Image rejected successfully", "success");
-        // Clear the last evaluation since we've acted on it
-        this.lastEvaluationResult = null;
-        this.lastEvaluatedImageSrc = null;
-      } else {
-        this.showQuickRejectStatus("Could not find submit button", "error");
-      }
-    }, 200);
-  }
-
-  /**
-   * Shows a status message for the quick reject action.
-   */
-  private showQuickRejectStatus(message: string, type: "success" | "error"): void {
-    const color = type === "success" ? "#4CAF50" : "#f44336";
-    const statusHtml = `<div id="gemini-reject-status" style="color: ${color}; margin-top: 5px; font-weight: bold;">${message}</div>`;
-
-    $("#gemini-reject-status").remove();
-    $("#gemini").append(statusHtml);
-
-    // Auto-remove after 3 seconds
-    setTimeout(() => {
-      $("#gemini-reject-status").fadeOut(300, function() {
-        $(this).remove();
+          this.getGeminiPictureEvaluation(base64data)
+            .then((evaluation: string) => {
+              const result = JSON.parse(evaluation) as GeminiEvaluationResult;
+              resolve(result);
+            })
+            .catch(reject);
+        },
+        onerror: (error: any) => {
+          reject(new Error(`Failed to fetch image: ${error}`));
+        },
       });
-    }, 3000);
+    });
+  }
+
+  /**
+   * Checks if the Gemini API key is configured.
+   */
+  isConfigured(): boolean {
+    return !!this.geminiApiKey;
   }
 }

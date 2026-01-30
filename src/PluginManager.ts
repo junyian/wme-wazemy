@@ -101,6 +101,16 @@ export default class PluginManager {
   public getLayer(name: string): any {
     return this.layerRegistry.get(name);
   }
+
+  /**
+   * Retrieves a plugin by its key.
+   *
+   * @param {string} key - The key associated with the plugin.
+   * @return {IPlugin | undefined} The plugin instance, or undefined if not found.
+   */
+  public getPlugin(key: string): IPlugin | undefined {
+    return this.plugins[key];
+  }
 }
 
 PluginManager.instance = new PluginManager(SettingsStorage.instance);

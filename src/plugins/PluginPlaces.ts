@@ -3,6 +3,10 @@ import PluginManager from "../PluginManager";
 import SettingsStorage from "../SettingsStorage";
 import { WmeSDK } from "wme-sdk-typings";
 import { formatRelativeTime, formatFullDate } from "../utils/dateUtils";
+import PluginGemini, {
+  GeminiEvaluationResult,
+  VIOLATION_TO_WME_REASON,
+} from "./PluginGemini";
 
 export default class PluginPlaces implements IPlugin {
   private sdk: WmeSDK;
@@ -28,6 +32,7 @@ export default class PluginPlaces implements IPlugin {
             <th>L</th>
             <th>Name</th>
             <th>Errors</th>
+            <th title="Gemini AI evaluation for image PURs">AI</th>
           </tr>
         </thead>
         <tbody></tbody>
@@ -259,9 +264,12 @@ export default class PluginPlaces implements IPlugin {
           venue: any;
           status: { priority: 0 | 1 | 2 | 3; errors: string[] };
           isPUR: boolean;
+          isImagePUR: boolean;
           purDate: number | null;
           lon: number;
           lat: number;
+          geminiResult?: GeminiEvaluationResult;
+          imageUrl?: string;
         }
 
         const processedVenues: ProcessedVenue[] = [];
@@ -269,6 +277,8 @@ export default class PluginPlaces implements IPlugin {
         venues.forEach((venue: any) => {
           const status = evaluateVenue(venue);
           const isPUR = checkPURstatus(venue);
+          const isImagePUR =
+            isPUR && venue.venueUpdateRequests?.[0]?.type === "IMAGE";
           if (status.priority > 0 || isPUR) {
             let lon = 0;
             let lat = 0;
@@ -279,13 +289,22 @@ export default class PluginPlaces implements IPlugin {
               lon = venue.geometry.coordinates[0];
               lat = venue.geometry.coordinates[1];
             }
+
+            // Get image URL for IMAGE PURs
+            let imageUrl: string | undefined;
+            if (isImagePUR && venue.venueUpdateRequests?.[0]?.imageId) {
+              imageUrl = `https://www.waze.com/venue_images/${venue.venueUpdateRequests[0].imageId}`;
+            }
+
             processedVenues.push({
               venue,
               status,
               isPUR,
+              isImagePUR,
               purDate: getPURDate(venue),
               lon,
               lat,
+              imageUrl,
             });
           }
         });
@@ -304,6 +323,39 @@ export default class PluginPlaces implements IPlugin {
           // Both are non-PURs: keep original order
           return 0;
         });
+
+        // Evaluate IMAGE PURs with Gemini AI
+        const geminiPlugin = PluginManager.instance.getPlugin(
+          "gemini",
+        ) as PluginGemini;
+        const imagePURs = processedVenues.filter(
+          (pv) => pv.isImagePUR && pv.imageUrl,
+        );
+
+        if (geminiPlugin?.isConfigured() && imagePURs.length > 0) {
+          $("#wazemyPlaces_scanStatus").text(
+            `Evaluating ${imagePURs.length} image(s) with Gemini...`,
+          );
+
+          // Evaluate images in parallel (with a small delay between each to avoid rate limits)
+          const evaluationPromises = imagePURs.map(async (pv, index) => {
+            // Small delay between requests to avoid rate limiting
+            await new Promise((resolve) => setTimeout(resolve, index * 500));
+            try {
+              const result = await geminiPlugin.evaluateImageFromUrl(
+                pv.imageUrl!,
+              );
+              pv.geminiResult = result;
+            } catch (error) {
+              console.error(
+                `[WazeMY] Gemini evaluation failed for ${pv.venue.name}:`,
+                error,
+              );
+            }
+          });
+
+          await Promise.all(evaluationPromises);
+        }
 
         // Render sorted venues
         let purCount = 0;
@@ -368,9 +420,126 @@ export default class PluginPlaces implements IPlugin {
           const errorsHTML = `<td>${status.errors.join("\r\n")}</td>`;
           row.append(errorsHTML);
 
+          // AI column for Gemini evaluation
+          let aiHTML = `<td></td>`;
+          if (pv.isImagePUR && pv.geminiResult) {
+            const suggestion = pv.geminiResult.suggestion;
+            const reason = pv.geminiResult.reason;
+            if (suggestion === "Reject") {
+              const violations = pv.geminiResult.violations || [];
+              const primaryViolation = violations[0] || "OTHER_GENERAL_ISSUE";
+              aiHTML = `<td class="wazemyPlaces_ai_reject" title="${reason}">
+                <span>✗</span>
+                <button class="wazemyPlaces_quickReject"
+                  data-venue-id="${venue.id}"
+                  data-violation="${primaryViolation}"
+                  title="Quick Reject: ${violations.join(", ")}">
+                  Reject
+                </button>
+              </td>`;
+            } else {
+              aiHTML = `<td class="wazemyPlaces_ai_approve" title="${reason}">✓</td>`;
+            }
+          } else if (pv.isImagePUR && !pv.geminiResult) {
+            aiHTML = `<td title="Gemini evaluation not available">-</td>`;
+          }
+          row.append(aiHTML);
+
           $("#wazemyPlaces_venues > tbody").append(row);
           totalCount++;
         });
+
+        // Attach Quick Reject button handlers
+        $(".wazemyPlaces_quickReject").on("click", function (e) {
+          e.stopPropagation(); // Prevent row click from triggering
+          const button = $(this);
+          const venueId = button.data("venue-id");
+          const violation = button.data("violation");
+          performQuickReject(venueId, violation, button);
+        });
+
+        // Quick reject function
+        function performQuickReject(
+          venueId: string,
+          violation: string,
+          button: JQuery,
+        ): void {
+          const wmeReasonValue = VIOLATION_TO_WME_REASON[violation] || "8";
+
+          // Find and select the venue in WME to open its panel
+          const venue = processedVenues.find((pv) => pv.venue.id === venueId);
+          if (!venue) {
+            console.log("[WazeMY] Could not find venue for quick reject.");
+            return;
+          }
+
+          // Center map on venue first
+          const sdk = unsafeWindow.getWmeSdk({
+            scriptId: "wme-wazemy-places-reject",
+            scriptName: "WazeMY",
+          });
+          sdk.Map.setMapCenter({
+            lonLat: { lon: venue.lon, lat: venue.lat },
+          });
+
+          // Disable button and show progress
+          button.prop("disabled", true).text("...");
+
+          // Wait for map to center, then try to click the PUR and reject
+          setTimeout(() => {
+            // Try to find and click the reject button in WME's PUR panel
+            const rejectButton = $(
+              'wz-button[color="secondary"]:contains("Reject"), ' +
+                'wz-button.reject-button, ' +
+                'button:contains("Reject")',
+            ).first();
+
+            if (rejectButton.length > 0) {
+              rejectButton[0].click();
+
+              // Wait for dialog, then select reason and submit
+              setTimeout(() => {
+                const reasonSelect = $(
+                  'wz-select[name="annotationType"], ' +
+                    'select[name="annotationType"], ' +
+                    ".rejection-reason select",
+                ).first();
+
+                if (reasonSelect.length > 0) {
+                  const selectElement = reasonSelect[0] as HTMLSelectElement;
+                  if (selectElement.tagName.toLowerCase() === "wz-select") {
+                    (selectElement as any).value = wmeReasonValue;
+                    selectElement.dispatchEvent(
+                      new Event("change", { bubbles: true }),
+                    );
+                  } else {
+                    selectElement.value = wmeReasonValue;
+                    $(selectElement).trigger("change");
+                  }
+                }
+
+                // Click submit
+                setTimeout(() => {
+                  const submitButton = $(
+                    'wz-button:contains("Submit"), ' +
+                      'wz-button:contains("Confirm"), ' +
+                      'wz-button[color="primary"]:visible',
+                  ).first();
+
+                  if (submitButton.length > 0) {
+                    submitButton[0].click();
+                    button.text("Done").addClass("wazemyPlaces_rejected");
+                  } else {
+                    button.prop("disabled", false).text("Retry");
+                  }
+                }, 200);
+              }, 300);
+            } else {
+              console.log("[WazeMY] Could not find WME reject button.");
+              button.prop("disabled", false).text("Retry");
+            }
+          }, 500);
+        }
 
         $("#wazemyPlaces_purCount").text(`# PUR = ${purCount}`);
         $("#wazemyPlaces_totalCount").text(`# total = ${totalCount}`);

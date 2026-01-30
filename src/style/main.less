@@ -97,9 +97,46 @@
         margin: 5px 0;
         padding-left: 20px;
     }
+}
 
-    #gemini-quick-reject {
-        margin-top: 8px;
-        width: 100%;
+// Places AI column styles
+.wazemyPlaces_ai_approve {
+    background-color: #90EE90;
+    text-align: center;
+    color: #2e7d32;
+    font-weight: bold;
+}
+
+.wazemyPlaces_ai_reject {
+    background-color: #FFCDD2;
+    text-align: center;
+    color: #c62828;
+
+    span {
+        font-weight: bold;
+        margin-right: 4px;
     }
+}
+
+.wazemyPlaces_quickReject {
+    font-size: 10px;
+    padding: 2px 6px;
+    cursor: pointer;
+    background-color: #f44336;
+    color: white;
+    border: none;
+    border-radius: 3px;
+
+    &:hover {
+        background-color: #d32f2f;
+    }
+
+    &:disabled {
+        background-color: #999;
+        cursor: not-allowed;
+    }
+}
+
+.wazemyPlaces_rejected {
+    background-color: #4CAF50 !important;
 }
