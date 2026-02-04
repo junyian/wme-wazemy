@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026.02.05.1
+
+*   Fixed IMAGE PUR evaluation in Places scanner
+    *   Fixed image URL extraction to use PUR id instead of missing imageId field
+    *   Added GeminiError class with typed errors (quota, api_key, network, unknown)
+    *   Evaluations now stop early when API quota is exceeded to avoid wasted requests
+    *   Added specific error indicators in AI column: Q (quota), K (api key), N (network), ! (unknown)
+    *   Added progress indicator showing "Evaluating image X/Y with Gemini..."
+    *   Added helpful tooltips explaining each error state
+    *   Added CSS styling for error states (orange background for errors, gray for skipped)
+
 ## 2026.01.29.1
 
 *   Improved Gemini image evaluation performance

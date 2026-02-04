@@ -5,6 +5,8 @@ import { WmeSDK } from "wme-sdk-typings";
 import { formatRelativeTime, formatFullDate } from "../utils/dateUtils";
 import PluginGemini, {
   GeminiEvaluationResult,
+  GeminiError,
+  GeminiErrorType,
   VIOLATION_TO_WME_REASON,
 } from "./PluginGemini";
 
@@ -269,6 +271,7 @@ export default class PluginPlaces implements IPlugin {
           lon: number;
           lat: number;
           geminiResult?: GeminiEvaluationResult;
+          geminiError?: GeminiErrorType;
           imageUrl?: string;
         }
 
@@ -292,8 +295,13 @@ export default class PluginPlaces implements IPlugin {
 
             // Get image URL for IMAGE PURs
             let imageUrl: string | undefined;
-            if (isImagePUR && venue.venueUpdateRequests?.[0]?.imageId) {
-              imageUrl = `https://www.waze.com/venue_images/${venue.venueUpdateRequests[0].imageId}`;
+            if (isImagePUR) {
+              const pur = venue.venueUpdateRequests?.[0];
+              // For IMAGE type PURs, the PUR's own id is the image identifier
+              const imgId = pur?.id;
+              if (imgId) {
+                imageUrl = `https://www.waze.com/venue_images/${imgId}`;
+              }
             }
 
             processedVenues.push({
@@ -332,15 +340,43 @@ export default class PluginPlaces implements IPlugin {
           (pv) => pv.isImagePUR && pv.imageUrl,
         );
 
-        if (geminiPlugin?.isConfigured() && imagePURs.length > 0) {
-          $("#wazemyPlaces_scanStatus").text(
-            `Evaluating ${imagePURs.length} image(s) with Gemini...`,
+        // Debug logging for Gemini evaluation
+        const allImagePURs = processedVenues.filter((pv) => pv.isImagePUR);
+        console.log(
+          `[WazeMY] Image PURs: ${allImagePURs.length} total, ${imagePURs.length} with imageUrl`,
+        );
+        if (allImagePURs.length > 0 && imagePURs.length === 0) {
+          console.log(
+            "[WazeMY] Image PURs found but no imageUrl. First IMAGE PUR data:",
+            allImagePURs[0].venue.venueUpdateRequests?.[0],
           );
+        }
+        console.log(
+          `[WazeMY] Gemini plugin found: ${!!geminiPlugin}, configured: ${geminiPlugin?.isConfigured()}`,
+        );
 
-          // Evaluate images in parallel (with a small delay between each to avoid rate limits)
-          const evaluationPromises = imagePURs.map(async (pv, index) => {
+        if (geminiPlugin?.isConfigured() && imagePURs.length > 0) {
+          let quotaExceeded = false;
+          let evaluated = 0;
+
+          // Evaluate images sequentially to detect quota errors early
+          for (const pv of imagePURs) {
+            if (quotaExceeded) {
+              // Mark remaining venues as quota-limited
+              pv.geminiError = "quota";
+              continue;
+            }
+
+            evaluated++;
+            $("#wazemyPlaces_scanStatus").text(
+              `Evaluating image ${evaluated}/${imagePURs.length} with Gemini...`,
+            );
+
             // Small delay between requests to avoid rate limiting
-            await new Promise((resolve) => setTimeout(resolve, index * 500));
+            if (evaluated > 1) {
+              await new Promise((resolve) => setTimeout(resolve, 500));
+            }
+
             try {
               const result = await geminiPlugin.evaluateImageFromUrl(
                 pv.imageUrl!,
@@ -351,10 +387,27 @@ export default class PluginPlaces implements IPlugin {
                 `[WazeMY] Gemini evaluation failed for ${pv.venue.name}:`,
                 error,
               );
-            }
-          });
 
-          await Promise.all(evaluationPromises);
+              // Check if this is a quota error
+              if (error instanceof GeminiError) {
+                pv.geminiError = error.type;
+                if (error.type === "quota") {
+                  quotaExceeded = true;
+                  console.warn(
+                    "[WazeMY] Gemini quota exceeded, skipping remaining evaluations",
+                  );
+                }
+              } else {
+                pv.geminiError = "unknown";
+              }
+            }
+          }
+
+          if (quotaExceeded) {
+            $("#wazemyPlaces_scanStatus").text(
+              `Gemini quota exceeded. Evaluated ${evaluated - 1}/${imagePURs.length} images.`,
+            );
+          }
         }
 
         // Render sorted venues
@@ -440,8 +493,46 @@ export default class PluginPlaces implements IPlugin {
             } else {
               aiHTML = `<td class="wazemyPlaces_ai_approve" title="${reason}">✓</td>`;
             }
+          } else if (pv.isImagePUR && pv.geminiError) {
+            // Show specific error indicators
+            const errorInfo: Record<
+              string,
+              { icon: string; label: string; tooltip: string }
+            > = {
+              quota: {
+                icon: "Q",
+                label: "Quota",
+                tooltip: "Gemini API quota exceeded - try again later",
+              },
+              api_key: {
+                icon: "K",
+                label: "Key",
+                tooltip: "Invalid Gemini API key - check settings",
+              },
+              network: {
+                icon: "N",
+                label: "Net",
+                tooltip: "Network error - check your connection",
+              },
+              unknown: {
+                icon: "!",
+                label: "Error",
+                tooltip: "Evaluation failed - check console for details",
+              },
+            };
+            const info = errorInfo[pv.geminiError] || errorInfo.unknown;
+            aiHTML = `<td class="wazemyPlaces_ai_error" title="${info.tooltip}">${info.icon}</td>`;
           } else if (pv.isImagePUR && !pv.geminiResult) {
-            aiHTML = `<td title="Gemini evaluation not available">-</td>`;
+            // No evaluation attempted
+            let tooltip = "Gemini evaluation not available";
+            if (!geminiPlugin) {
+              tooltip = "Gemini plugin not loaded";
+            } else if (!geminiPlugin.isConfigured()) {
+              tooltip = "Gemini API key not configured - add key in settings";
+            } else if (!pv.imageUrl) {
+              tooltip = "No image URL found in PUR data";
+            }
+            aiHTML = `<td class="wazemyPlaces_ai_none" title="${tooltip}">-</td>`;
           }
           row.append(aiHTML);
 
@@ -490,7 +581,7 @@ export default class PluginPlaces implements IPlugin {
             // Try to find and click the reject button in WME's PUR panel
             const rejectButton = $(
               'wz-button[color="secondary"]:contains("Reject"), ' +
-                'wz-button.reject-button, ' +
+                "wz-button.reject-button, " +
                 'button:contains("Reject")',
             ).first();
 

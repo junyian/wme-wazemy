@@ -2,7 +2,7 @@ import "./style/main.less";
 import PluginManager from "./PluginManager";
 import { WmeSDK } from "wme-sdk-typings";
 
-const updateMessage: string = `Version 2026.01.29.1: Improved Gemini image evaluation performance with debounced click handling, image caching, proper binary-to-base64 conversion, and faster API responses.`;
+const updateMessage: string = `Version 2026.02.05.1: Fixed IMAGE PUR evaluation and improved Gemini error handling with quota detection and clearer status indicators.`;
 
 var sdk: WmeSDK;
 

@@ -24,6 +24,19 @@ export interface GeminiEvaluationResult {
   violations: string[];
 }
 
+// Error types for better UX
+export type GeminiErrorType = "quota" | "api_key" | "network" | "unknown";
+
+export class GeminiError extends Error {
+  type: GeminiErrorType;
+
+  constructor(message: string, type: GeminiErrorType) {
+    super(message);
+    this.type = type;
+    this.name = "GeminiError";
+  }
+}
+
 export default class PluginGemini implements IPlugin {
   private sdk: WmeSDK;
   private geminiApiKey: string;
@@ -299,12 +312,68 @@ Decision Logic:
         onload: function (response) {
           try {
             const data = JSON.parse(response.responseText);
-            // console.log(data["candidates"][0]["content"]["parts"][0]["text"]);
+            // Check for API error response
+            if (data.error) {
+              console.error("[WazeMY] Gemini API error:", data.error);
+              const errorMsg = data.error.message || "";
+              const errorStatus = data.error.status || "";
+
+              // Detect quota/rate limit errors
+              if (
+                errorStatus === "RESOURCE_EXHAUSTED" ||
+                errorMsg.toLowerCase().includes("quota") ||
+                errorMsg.toLowerCase().includes("rate limit") ||
+                response.status === 429
+              ) {
+                reject(new GeminiError("API quota exceeded", "quota"));
+                return;
+              }
+
+              // Detect API key errors
+              if (
+                errorStatus === "INVALID_ARGUMENT" ||
+                errorStatus === "UNAUTHENTICATED" ||
+                errorMsg.toLowerCase().includes("api key")
+              ) {
+                reject(new GeminiError("Invalid API key", "api_key"));
+                return;
+              }
+
+              reject(
+                new GeminiError(
+                  `Gemini API error: ${data.error.message || JSON.stringify(data.error)}`,
+                  "unknown",
+                ),
+              );
+              return;
+            }
+            if (!data.candidates?.[0]?.content?.parts?.[0]?.text) {
+              console.error("[WazeMY] Unexpected Gemini response:", data);
+              reject(
+                new GeminiError(
+                  "Unexpected Gemini response structure",
+                  "unknown",
+                ),
+              );
+              return;
+            }
             resolve(data["candidates"][0]["content"]["parts"][0]["text"]);
           } catch (e) {
-            console.log(new Error("Failed to parse response: " + e.message));
-            reject(new Error(`Failed to parse Gemini response: ${e.message}`));
+            console.error(
+              "[WazeMY] Failed to parse Gemini response:",
+              response.responseText,
+            );
+            reject(
+              new GeminiError(
+                `Failed to parse Gemini response: ${e.message}`,
+                "unknown",
+              ),
+            );
           }
+        },
+        onerror: function (error) {
+          console.error("[WazeMY] Gemini request failed:", error);
+          reject(new GeminiError(`Network error: ${error}`, "network"));
         },
       });
     });
