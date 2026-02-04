@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name        WME WazeMY
 // @namespace   https://www.github.com/junyian/
-// @version     2026.01.29.1
+// @version     2026.02.05.1
 // @author      junyianl <junyian@gmail.com>
 // @source      https://github.com/junyian/wme-wazemy
 // @license     MIT
@@ -115,6 +115,62 @@ ___CSS_LOADER_EXPORT___.push([module.id, `.wazemySettings {
 .wazemyURs_severity_high {
   background-color: #FF6B6B;
   text-align: center;
+}
+#gemini {
+  margin-top: 10px;
+  padding: 8px;
+  border-radius: 4px;
+  background-color: #f5f5f5;
+}
+#gemini ul {
+  margin: 5px 0;
+  padding-left: 20px;
+}
+.wazemyPlaces_ai_approve {
+  background-color: #90EE90;
+  text-align: center;
+  color: #2e7d32;
+  font-weight: bold;
+}
+.wazemyPlaces_ai_reject {
+  background-color: #FFCDD2;
+  text-align: center;
+  color: #c62828;
+}
+.wazemyPlaces_ai_reject span {
+  font-weight: bold;
+  margin-right: 4px;
+}
+.wazemyPlaces_quickReject {
+  font-size: 10px;
+  padding: 2px 6px;
+  cursor: pointer;
+  background-color: #f44336;
+  color: white;
+  border: none;
+  border-radius: 3px;
+}
+.wazemyPlaces_quickReject:hover {
+  background-color: #d32f2f;
+}
+.wazemyPlaces_quickReject:disabled {
+  background-color: #999;
+  cursor: not-allowed;
+}
+.wazemyPlaces_rejected {
+  background-color: #4CAF50 !important;
+}
+.wazemyPlaces_ai_error {
+  background-color: #FFE0B2;
+  text-align: center;
+  color: #e65100;
+  font-weight: bold;
+  cursor: help;
+}
+.wazemyPlaces_ai_none {
+  text-align: center;
+  color: #9e9e9e;
+  cursor: help;
 }
 `, ""]);
 // Exports
@@ -1744,7 +1800,364 @@ function formatFullDate(timestamp) {
     });
 }
 
+;// ./src/plugins/PluginGemini.ts
+
+
+// Mapping from Gemini violation codes to WME rejection reason values
+const VIOLATION_TO_WME_REASON = {
+    IRRELEVANT_IMAGE: "7", // Not relevant / wrong place
+    LOW_QUALITY: "3", // Low quality
+    INAPPROPRIATE_CONTENT: "4", // Offensive
+    PERSONAL_INFORMATION: "6", // Private / personal info
+    SCREENSHOT_OF_MAP: "5", // Screenshot
+    EXCESSIVE_TEXT_OR_OVERLAYS: "3", // Low quality (closest match)
+    COPYRIGHTED_MATERIAL: "1", // Copyrighted
+    ORIENTATION_OR_CROPPING_ISSUE: "3", // Low quality
+    DUPLICATE_IMAGE: "2", // Duplicate
+    OTHER_GENERAL_ISSUE: "8", // Other
+};
+class GeminiError extends Error {
+    constructor(message, type) {
+        super(message);
+        this.type = type;
+        this.name = "GeminiError";
+    }
+}
+class PluginGemini {
+    /**
+     * Constructs a new instance of the PluginGemini class.
+     * Initializes the WME SDK with the specified script ID and name,
+     * and calls the initialize method to set up the plugin.
+     */
+    constructor() {
+        this.lastEvaluatedImageSrc = null;
+        this.evaluateDebounceTimer = null;
+        this.lastEvaluationResult = null;
+        this.sdk = unsafeWindow.getWmeSdk({
+            scriptId: "wme-wazemy-gemini",
+            scriptName: "WazeMY",
+        });
+        this.initialize();
+    }
+    /**
+     * Initialize plugin.
+     *
+     * @return {void} This function does not return anything.
+     */
+    initialize() {
+        const settingsHTML = `
+      <div>
+        <input type="checkbox" id="wazemySettings_gemini_enable"/>
+        <label for="wazemySettings_gemini_enable">Enable Gemini integration</label>
+      </div>
+    `;
+        $("#wazemySettings_settings").append(settingsHTML);
+        $("#wazemySettings_gemini_enable").on("change", () => {
+            PluginManager.instance.updatePluginSettings("gemini", {
+                enable: $("#wazemySettings_gemini_enable").prop("checked"),
+            });
+        });
+        const geminiAPIKeySettings = `
+      <div>
+        <label for="wazemySettings_gemini_apiKey">API Key</label>
+        <input type="password" id="wazemySettings_gemini_apiKey" placeholder="Enter Gemini API Key"/>
+        <wz-button id="wazemySettings_gemini_saveApiKey" class="wazemySettingsButton" style="padding:3px">
+          Save
+        </wz-button>
+        <div style="font-size: 10px; margin-top: 5px;">
+          Get your API key from <a href="https://aistudio.google.com/" target="_blank">Google AI Studio</a>.
+        </div>
+      </div>
+    `;
+        $("#wazemySettings_gemini").append(geminiAPIKeySettings);
+        $("#wazemySettings_gemini_saveApiKey").on("click", () => {
+            PluginManager.instance.updatePluginSettings("gemini", {
+                geminiApiKey: $("#wazemySettings_gemini_apiKey").val(),
+            });
+        });
+        // Set settings according to last stored value.
+        const savedSettings = SettingsStorage.instance.getSetting("gemini");
+        if (savedSettings?.enable === true) {
+            $("#wazemySettings_gemini_enable").prop("checked", true);
+        }
+        else {
+            $("#wazemySettings_gemini_enable").prop("checked", false);
+        }
+        if (savedSettings?.geminiApiKey) {
+            $("#wazemySettings_gemini_apiKey").val(savedSettings.geminiApiKey);
+            this.geminiApiKey = savedSettings.geminiApiKey;
+        }
+        // let aiAnswer = this.getGeminiTextResponse("How AI does work?");
+        // console.log("[WazeMY] Gemini AI Answer:", aiAnswer);
+        this.initializeVenueUpdateRequestImageHelper();
+        console.log("[WazeMY] PluginGemini initialized.");
+    }
+    /**
+     * Enable plugin.
+     *
+     * @return {void} This function does not return anything.
+     */
+    enable() {
+        console.log("[WazeMY] PluginGemini enabled.");
+    }
+    /**
+     * Disable plugin.
+     *
+     * @return {void} This function does not return anything.
+     */
+    disable() {
+        console.log("[WazeMY] PluginGemini disabled.");
+    }
+    /**
+     * Updates the settings of the PluginGemini based on the provided settings object.
+     *
+     * @return {void} This function does not return anything.
+     */
+    updateSettings(settings) {
+        if (settings.enable) {
+            if (settings.enable === true) {
+                this.enable();
+            }
+            else {
+                this.disable();
+            }
+        }
+        console.log("[WazeMY] PluginGemini settings updated.");
+    }
+    /**
+     * Initialize the helper for venue update request image.
+     *
+     * @return {void} This function does not return anything.
+     */
+    initializeVenueUpdateRequestImageHelper() {
+        const arrayBufferToBase64 = (buffer) => {
+            const bytes = new Uint8Array(buffer);
+            let binary = "";
+            for (let i = 0; i < bytes.byteLength; i++) {
+                binary += String.fromCharCode(bytes[i]);
+            }
+            return btoa(binary);
+        };
+        const onload_base64image = (response) => {
+            const base64data = arrayBufferToBase64(response.response);
+            this.getGeminiPictureEvaluation(base64data).then((evaluation) => {
+                const evaluationText = JSON.parse(evaluation);
+                this.lastEvaluationResult = evaluationText;
+                $("#gemini").replaceWith(`<div id='gemini' class="changes"><b>Gemini image evaluation: ${evaluationText.suggestion}</b><br><i>${evaluationText.reason}</i><br></div>`);
+                if (evaluationText.suggestion === "Reject") {
+                    $("#gemini").append(`<b>Violations:</b><ul>${evaluationText.violations.map((v) => `<li>${v}</li>`).join("")}</ul>`);
+                }
+            });
+        };
+        const evaluateImage = (displayAfterElement) => {
+            const imagePreview = $(".image-preview");
+            const geminiElement = $("#gemini");
+            if (imagePreview.length > 0 && geminiElement.length === 0) {
+                const src = imagePreview.attr("src");
+                if (src === this.lastEvaluatedImageSrc) {
+                    return;
+                }
+                this.lastEvaluatedImageSrc = src;
+                $(displayAfterElement).after("<div id='gemini' class='changes'><i>Gemini is evaluating...</i><br></div>");
+                GM_xmlhttpRequest({
+                    method: "GET",
+                    url: src,
+                    responseType: "arraybuffer",
+                    onload: onload_base64image.bind(this),
+                });
+            }
+        };
+        $(document.body).on("click", (_e) => {
+            if (this.evaluateDebounceTimer) {
+                clearTimeout(this.evaluateDebounceTimer);
+            }
+            this.evaluateDebounceTimer = setTimeout(() => {
+                evaluateImage("div.changes");
+            }, 300);
+        });
+    }
+    getGeminiTextResponse(context) {
+        return new Promise((resolve, reject) => {
+            if (!this.geminiApiKey) {
+                reject(new Error("Gemini API key is not set."));
+                return;
+            }
+            const model = "gemini-2.5-flash";
+            const message = {
+                contents: [{ parts: [{ text: context }] }],
+                generationConfig: { thinkingConfig: { thinkingBudget: 0 } },
+            };
+            GM_xmlhttpRequest({
+                method: "POST",
+                url: `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${this.geminiApiKey}`,
+                headers: { "Content-Type": "application/json" },
+                data: JSON.stringify(message),
+                onload: function (response) {
+                    try {
+                        const data = JSON.parse(response.responseText);
+                        // console.log(data["candidates"][0]["content"]["parts"][0]["text"]);
+                        resolve(data["candidates"][0]["content"]["parts"][0]["text"]);
+                    }
+                    catch (e) {
+                        console.error(new Error("Failed to parse response: " + e.message));
+                        reject(new Error(`Failed to parse Gemini response: ${e.message}`));
+                    }
+                },
+            });
+        });
+    }
+    getGeminiPictureEvaluation(base64ImageData) {
+        return new Promise((resolve, reject) => {
+            if (!this.geminiApiKey) {
+                reject(new Error("Gemini API key is not set."));
+                return;
+            }
+            const model = "gemini-2.5-flash";
+            const prompt = `You are an AI assistant specialized in Waze Map Editor (WME) venue image moderation.
+
+Your task is to evaluate an uploaded image of a Waze venue against Waze Map Editor's official guidelines for venue images. You will determine if the image should be 'Approved' or 'Rejected' and provide a clear, concise justification, along with specific guideline violations if rejected.
+
+I will provide you with an image for evaluation.
+
+Respond with a JSON object with the following fields:
+- "suggestion": "Approve" or "Reject"
+- "reason": Concise explanation for the decision
+- "violations": Array of violation codes if rejected. Valid codes: "IRRELEVANT_IMAGE", "LOW_QUALITY", "INAPPROPRIATE_CONTENT", "PERSONAL_INFORMATION", "SCREENSHOT_OF_MAP", "EXCESSIVE_TEXT_OR_OVERLAYS", "COPYRIGHTED_MATERIAL", "ORIENTATION_OR_CROPPING_ISSUE", "DUPLICATE_IMAGE", "OTHER_GENERAL_ISSUE"
+
+Waze Venue Image Guidelines to Consider:
+
+1.  **Relevance:** The image *must* clearly depict the venue/business itself (e.g., its entrance, sign, storefront). No random objects, people (unless part of a large crowd at an event, but generally avoided), or irrelevant scenery.
+2.  **Quality:** Images must be clear, well-lit, in focus, and not blurry, pixelated, overexposed, or excessively dark.
+3.  **Appropriateness:** No offensive, violent, sexually explicit, or hateful content.
+4.  **No Personal Information:** Avoid identifiable faces (especially children), license plates, or other sensitive personal data unless it's an unchangeable part of the venue's permanent signage.
+5.  **No Map Screenshots:** Do not approve images that are screenshots of Waze, Google Maps, or any other navigation/map application.
+6.  **Minimal Text/Overlays:** Avoid images with excessive text, watermarks, promotional overlays, or graphic elements that are not part of the venue's physical branding/signage. A clear logo on a sign is generally fine; a flyer overlay is not.
+7.  **Copyright:** Avoid copyrighted images without explicit permission (AI should err on the side of caution).
+8.  **Focus:** The primary subject of the image should be the venue.
+9.  **Orientation:** Landscape orientation is generally preferred for display, but a good quality portrait image of a tall building is acceptable if it clearly shows the venue. Poor rotation is a rejection reason.
+
+Decision Logic:
+
+* If the image adheres to all the above guidelines, set 'decision' to "Approved".
+* If the image violates one or more guidelines, set 'decision' to "Rejected" and list *all* applicable violation codes in the 'violations' array.`;
+            const message = {
+                contents: [
+                    {
+                        parts: [
+                            {
+                                inlineData: {
+                                    mimeType: "image/jpeg",
+                                    data: base64ImageData,
+                                },
+                            },
+                            {
+                                text: prompt,
+                            },
+                        ],
+                    },
+                ],
+                generationConfig: {
+                    thinkingConfig: { thinkingBudget: 0 },
+                    responseMimeType: "application/json",
+                },
+            };
+            GM_xmlhttpRequest({
+                method: "POST",
+                url: `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${this.geminiApiKey}`,
+                headers: { "Content-Type": "application/json" },
+                data: JSON.stringify(message),
+                onload: function (response) {
+                    try {
+                        const data = JSON.parse(response.responseText);
+                        // Check for API error response
+                        if (data.error) {
+                            console.error("[WazeMY] Gemini API error:", data.error);
+                            const errorMsg = data.error.message || "";
+                            const errorStatus = data.error.status || "";
+                            // Detect quota/rate limit errors
+                            if (errorStatus === "RESOURCE_EXHAUSTED" ||
+                                errorMsg.toLowerCase().includes("quota") ||
+                                errorMsg.toLowerCase().includes("rate limit") ||
+                                response.status === 429) {
+                                reject(new GeminiError("API quota exceeded", "quota"));
+                                return;
+                            }
+                            // Detect API key errors
+                            if (errorStatus === "INVALID_ARGUMENT" ||
+                                errorStatus === "UNAUTHENTICATED" ||
+                                errorMsg.toLowerCase().includes("api key")) {
+                                reject(new GeminiError("Invalid API key", "api_key"));
+                                return;
+                            }
+                            reject(new GeminiError(`Gemini API error: ${data.error.message || JSON.stringify(data.error)}`, "unknown"));
+                            return;
+                        }
+                        if (!data.candidates?.[0]?.content?.parts?.[0]?.text) {
+                            console.error("[WazeMY] Unexpected Gemini response:", data);
+                            reject(new GeminiError("Unexpected Gemini response structure", "unknown"));
+                            return;
+                        }
+                        resolve(data["candidates"][0]["content"]["parts"][0]["text"]);
+                    }
+                    catch (e) {
+                        console.error("[WazeMY] Failed to parse Gemini response:", response.responseText);
+                        reject(new GeminiError(`Failed to parse Gemini response: ${e.message}`, "unknown"));
+                    }
+                },
+                onerror: function (error) {
+                    console.error("[WazeMY] Gemini request failed:", error);
+                    reject(new GeminiError(`Network error: ${error}`, "network"));
+                },
+            });
+        });
+    }
+    /**
+     * Evaluates an image from a URL using Gemini AI.
+     * This method can be called by other plugins (e.g., PluginPlaces).
+     *
+     * @param imageUrl - The URL of the image to evaluate
+     * @returns Promise resolving to the evaluation result
+     */
+    evaluateImageFromUrl(imageUrl) {
+        return new Promise((resolve, reject) => {
+            if (!this.geminiApiKey) {
+                reject(new Error("Gemini API key is not set."));
+                return;
+            }
+            GM_xmlhttpRequest({
+                method: "GET",
+                url: imageUrl,
+                responseType: "arraybuffer",
+                onload: (response) => {
+                    const bytes = new Uint8Array(response.response);
+                    let binary = "";
+                    for (let i = 0; i < bytes.byteLength; i++) {
+                        binary += String.fromCharCode(bytes[i]);
+                    }
+                    const base64data = btoa(binary);
+                    this.getGeminiPictureEvaluation(base64data)
+                        .then((evaluation) => {
+                        const result = JSON.parse(evaluation);
+                        resolve(result);
+                    })
+                        .catch(reject);
+                },
+                onerror: (error) => {
+                    reject(new Error(`Failed to fetch image: ${error}`));
+                },
+            });
+        });
+    }
+    /**
+     * Checks if the Gemini API key is configured.
+     */
+    isConfigured() {
+        return !!this.geminiApiKey;
+    }
+}
+
 ;// ./src/plugins/PluginPlaces.ts
+
 
 
 
@@ -1768,6 +2181,7 @@ class PluginPlaces {
             <th>L</th>
             <th>Name</th>
             <th>Errors</th>
+            <th title="Gemini AI evaluation for image PURs">AI</th>
           </tr>
         </thead>
         <tbody></tbody>
@@ -1967,6 +2381,7 @@ class PluginPlaces {
                 venues.forEach((venue) => {
                     const status = evaluateVenue(venue);
                     const isPUR = checkPURstatus(venue);
+                    const isImagePUR = isPUR && venue.venueUpdateRequests?.[0]?.type === "IMAGE";
                     if (status.priority > 0 || isPUR) {
                         let lon = 0;
                         let lat = 0;
@@ -1978,13 +2393,25 @@ class PluginPlaces {
                             lon = venue.geometry.coordinates[0];
                             lat = venue.geometry.coordinates[1];
                         }
+                        // Get image URL for IMAGE PURs
+                        let imageUrl;
+                        if (isImagePUR) {
+                            const pur = venue.venueUpdateRequests?.[0];
+                            // For IMAGE type PURs, the PUR's own id is the image identifier
+                            const imgId = pur?.id;
+                            if (imgId) {
+                                imageUrl = `https://www.waze.com/venue_images/${imgId}`;
+                            }
+                        }
                         processedVenues.push({
                             venue,
                             status,
                             isPUR,
+                            isImagePUR,
                             purDate: getPURDate(venue),
                             lon,
                             lat,
+                            imageUrl,
                         });
                     }
                 });
@@ -2004,6 +2431,55 @@ class PluginPlaces {
                     // Both are non-PURs: keep original order
                     return 0;
                 });
+                // Evaluate IMAGE PURs with Gemini AI
+                const geminiPlugin = PluginManager.instance.getPlugin("gemini");
+                const imagePURs = processedVenues.filter((pv) => pv.isImagePUR && pv.imageUrl);
+                // Debug logging for Gemini evaluation
+                const allImagePURs = processedVenues.filter((pv) => pv.isImagePUR);
+                console.log(`[WazeMY] Image PURs: ${allImagePURs.length} total, ${imagePURs.length} with imageUrl`);
+                if (allImagePURs.length > 0 && imagePURs.length === 0) {
+                    console.log("[WazeMY] Image PURs found but no imageUrl. First IMAGE PUR data:", allImagePURs[0].venue.venueUpdateRequests?.[0]);
+                }
+                console.log(`[WazeMY] Gemini plugin found: ${!!geminiPlugin}, configured: ${geminiPlugin?.isConfigured()}`);
+                if (geminiPlugin?.isConfigured() && imagePURs.length > 0) {
+                    let quotaExceeded = false;
+                    let evaluated = 0;
+                    // Evaluate images sequentially to detect quota errors early
+                    for (const pv of imagePURs) {
+                        if (quotaExceeded) {
+                            // Mark remaining venues as quota-limited
+                            pv.geminiError = "quota";
+                            continue;
+                        }
+                        evaluated++;
+                        $("#wazemyPlaces_scanStatus").text(`Evaluating image ${evaluated}/${imagePURs.length} with Gemini...`);
+                        // Small delay between requests to avoid rate limiting
+                        if (evaluated > 1) {
+                            await new Promise((resolve) => setTimeout(resolve, 500));
+                        }
+                        try {
+                            const result = await geminiPlugin.evaluateImageFromUrl(pv.imageUrl);
+                            pv.geminiResult = result;
+                        }
+                        catch (error) {
+                            console.error(`[WazeMY] Gemini evaluation failed for ${pv.venue.name}:`, error);
+                            // Check if this is a quota error
+                            if (error instanceof GeminiError) {
+                                pv.geminiError = error.type;
+                                if (error.type === "quota") {
+                                    quotaExceeded = true;
+                                    console.warn("[WazeMY] Gemini quota exceeded, skipping remaining evaluations");
+                                }
+                            }
+                            else {
+                                pv.geminiError = "unknown";
+                            }
+                        }
+                    }
+                    if (quotaExceeded) {
+                        $("#wazemyPlaces_scanStatus").text(`Gemini quota exceeded. Evaluated ${evaluated - 1}/${imagePURs.length} images.`);
+                    }
+                }
                 // Render sorted venues
                 let purCount = 0;
                 let totalCount = 0;
@@ -2066,9 +2542,145 @@ class PluginPlaces {
                     row.append(colHTML);
                     const errorsHTML = `<td>${status.errors.join("\r\n")}</td>`;
                     row.append(errorsHTML);
+                    // AI column for Gemini evaluation
+                    let aiHTML = `<td></td>`;
+                    if (pv.isImagePUR && pv.geminiResult) {
+                        const suggestion = pv.geminiResult.suggestion;
+                        const reason = pv.geminiResult.reason;
+                        if (suggestion === "Reject") {
+                            const violations = pv.geminiResult.violations || [];
+                            const primaryViolation = violations[0] || "OTHER_GENERAL_ISSUE";
+                            aiHTML = `<td class="wazemyPlaces_ai_reject" title="${reason}">
+                <span>✗</span>
+                <button class="wazemyPlaces_quickReject"
+                  data-venue-id="${venue.id}"
+                  data-violation="${primaryViolation}"
+                  title="Quick Reject: ${violations.join(", ")}">
+                  Reject
+                </button>
+              </td>`;
+                        }
+                        else {
+                            aiHTML = `<td class="wazemyPlaces_ai_approve" title="${reason}">✓</td>`;
+                        }
+                    }
+                    else if (pv.isImagePUR && pv.geminiError) {
+                        // Show specific error indicators
+                        const errorInfo = {
+                            quota: {
+                                icon: "Q",
+                                label: "Quota",
+                                tooltip: "Gemini API quota exceeded - try again later",
+                            },
+                            api_key: {
+                                icon: "K",
+                                label: "Key",
+                                tooltip: "Invalid Gemini API key - check settings",
+                            },
+                            network: {
+                                icon: "N",
+                                label: "Net",
+                                tooltip: "Network error - check your connection",
+                            },
+                            unknown: {
+                                icon: "!",
+                                label: "Error",
+                                tooltip: "Evaluation failed - check console for details",
+                            },
+                        };
+                        const info = errorInfo[pv.geminiError] || errorInfo.unknown;
+                        aiHTML = `<td class="wazemyPlaces_ai_error" title="${info.tooltip}">${info.icon}</td>`;
+                    }
+                    else if (pv.isImagePUR && !pv.geminiResult) {
+                        // No evaluation attempted
+                        let tooltip = "Gemini evaluation not available";
+                        if (!geminiPlugin) {
+                            tooltip = "Gemini plugin not loaded";
+                        }
+                        else if (!geminiPlugin.isConfigured()) {
+                            tooltip = "Gemini API key not configured - add key in settings";
+                        }
+                        else if (!pv.imageUrl) {
+                            tooltip = "No image URL found in PUR data";
+                        }
+                        aiHTML = `<td class="wazemyPlaces_ai_none" title="${tooltip}">-</td>`;
+                    }
+                    row.append(aiHTML);
                     $("#wazemyPlaces_venues > tbody").append(row);
                     totalCount++;
                 });
+                // Attach Quick Reject button handlers
+                $(".wazemyPlaces_quickReject").on("click", function (e) {
+                    e.stopPropagation(); // Prevent row click from triggering
+                    const button = $(this);
+                    const venueId = button.data("venue-id");
+                    const violation = button.data("violation");
+                    performQuickReject(venueId, violation, button);
+                });
+                // Quick reject function
+                function performQuickReject(venueId, violation, button) {
+                    const wmeReasonValue = VIOLATION_TO_WME_REASON[violation] || "8";
+                    // Find and select the venue in WME to open its panel
+                    const venue = processedVenues.find((pv) => pv.venue.id === venueId);
+                    if (!venue) {
+                        console.log("[WazeMY] Could not find venue for quick reject.");
+                        return;
+                    }
+                    // Center map on venue first
+                    const sdk = unsafeWindow.getWmeSdk({
+                        scriptId: "wme-wazemy-places-reject",
+                        scriptName: "WazeMY",
+                    });
+                    sdk.Map.setMapCenter({
+                        lonLat: { lon: venue.lon, lat: venue.lat },
+                    });
+                    // Disable button and show progress
+                    button.prop("disabled", true).text("...");
+                    // Wait for map to center, then try to click the PUR and reject
+                    setTimeout(() => {
+                        // Try to find and click the reject button in WME's PUR panel
+                        const rejectButton = $('wz-button[color="secondary"]:contains("Reject"), ' +
+                            "wz-button.reject-button, " +
+                            'button:contains("Reject")').first();
+                        if (rejectButton.length > 0) {
+                            rejectButton[0].click();
+                            // Wait for dialog, then select reason and submit
+                            setTimeout(() => {
+                                const reasonSelect = $('wz-select[name="annotationType"], ' +
+                                    'select[name="annotationType"], ' +
+                                    ".rejection-reason select").first();
+                                if (reasonSelect.length > 0) {
+                                    const selectElement = reasonSelect[0];
+                                    if (selectElement.tagName.toLowerCase() === "wz-select") {
+                                        selectElement.value = wmeReasonValue;
+                                        selectElement.dispatchEvent(new Event("change", { bubbles: true }));
+                                    }
+                                    else {
+                                        selectElement.value = wmeReasonValue;
+                                        $(selectElement).trigger("change");
+                                    }
+                                }
+                                // Click submit
+                                setTimeout(() => {
+                                    const submitButton = $('wz-button:contains("Submit"), ' +
+                                        'wz-button:contains("Confirm"), ' +
+                                        'wz-button[color="primary"]:visible').first();
+                                    if (submitButton.length > 0) {
+                                        submitButton[0].click();
+                                        button.text("Done").addClass("wazemyPlaces_rejected");
+                                    }
+                                    else {
+                                        button.prop("disabled", false).text("Retry");
+                                    }
+                                }, 200);
+                            }, 300);
+                        }
+                        else {
+                            console.log("[WazeMY] Could not find WME reject button.");
+                            button.prop("disabled", false).text("Retry");
+                        }
+                    }, 500);
+                }
                 $("#wazemyPlaces_purCount").text(`# PUR = ${purCount}`);
                 $("#wazemyPlaces_totalCount").text(`# total = ${totalCount}`);
                 $("#wazemyPlaces_scanStatus").text("");
@@ -2125,266 +2737,6 @@ class PluginPlaces {
             this.disable();
         }
         console.log("[WazeMY] PluginPlaces settings updated.", settings);
-    }
-}
-
-;// ./src/plugins/PluginGemini.ts
-
-
-class PluginGemini {
-    /**
-     * Constructs a new instance of the PluginGemini class.
-     * Initializes the WME SDK with the specified script ID and name,
-     * and calls the initialize method to set up the plugin.
-     */
-    constructor() {
-        this.lastEvaluatedImageSrc = null;
-        this.evaluateDebounceTimer = null;
-        this.sdk = unsafeWindow.getWmeSdk({
-            scriptId: "wme-wazemy-gemini",
-            scriptName: "WazeMY",
-        });
-        this.initialize();
-    }
-    /**
-     * Initialize plugin.
-     *
-     * @return {void} This function does not return anything.
-     */
-    initialize() {
-        const settingsHTML = `
-      <div>
-        <input type="checkbox" id="wazemySettings_gemini_enable"/>
-        <label for="wazemySettings_gemini_enable">Enable Gemini integration</label>
-      </div>
-    `;
-        $("#wazemySettings_settings").append(settingsHTML);
-        $("#wazemySettings_gemini_enable").on("change", () => {
-            PluginManager.instance.updatePluginSettings("gemini", {
-                enable: $("#wazemySettings_gemini_enable").prop("checked"),
-            });
-        });
-        const geminiAPIKeySettings = `
-      <div>
-        <label for="wazemySettings_gemini_apiKey">API Key</label>
-        <input type="password" id="wazemySettings_gemini_apiKey" placeholder="Enter Gemini API Key"/>
-        <wz-button id="wazemySettings_gemini_saveApiKey" class="wazemySettingsButton" style="padding:3px">
-          Save
-        </wz-button>
-        <div style="font-size: 10px; margin-top: 5px;">
-          Get your API key from <a href="https://aistudio.google.com/" target="_blank">Google AI Studio</a>.
-        </div>
-      </div>
-    `;
-        $("#wazemySettings_gemini").append(geminiAPIKeySettings);
-        $("#wazemySettings_gemini_saveApiKey").on("click", () => {
-            PluginManager.instance.updatePluginSettings("gemini", {
-                geminiApiKey: $("#wazemySettings_gemini_apiKey").val(),
-            });
-        });
-        // Set settings according to last stored value.
-        const savedSettings = SettingsStorage.instance.getSetting("gemini");
-        if (savedSettings?.enable === true) {
-            $("#wazemySettings_gemini_enable").prop("checked", true);
-        }
-        else {
-            $("#wazemySettings_gemini_enable").prop("checked", false);
-        }
-        if (savedSettings?.geminiApiKey) {
-            $("#wazemySettings_gemini_apiKey").val(savedSettings.geminiApiKey);
-            this.geminiApiKey = savedSettings.geminiApiKey;
-        }
-        // let aiAnswer = this.getGeminiTextResponse("How AI does work?");
-        // console.log("[WazeMY] Gemini AI Answer:", aiAnswer);
-        this.initializeVenueUpdateRequestImageHelper();
-        console.log("[WazeMY] PluginGemini initialized.");
-    }
-    /**
-     * Enable plugin.
-     *
-     * @return {void} This function does not return anything.
-     */
-    enable() {
-        console.log("[WazeMY] PluginGemini enabled.");
-    }
-    /**
-     * Disable plugin.
-     *
-     * @return {void} This function does not return anything.
-     */
-    disable() {
-        console.log("[WazeMY] PluginGemini disabled.");
-    }
-    /**
-     * Updates the settings of the PluginGemini based on the provided settings object.
-     *
-     * @return {void} This function does not return anything.
-     */
-    updateSettings(settings) {
-        if (settings.enable) {
-            if (settings.enable === true) {
-                this.enable();
-            }
-            else {
-                this.disable();
-            }
-        }
-        console.log("[WazeMY] PluginGemini settings updated.");
-    }
-    /**
-     * Initialize the helper for venue update request image.
-     *
-     * @return {void} This function does not return anything.
-     */
-    initializeVenueUpdateRequestImageHelper() {
-        const arrayBufferToBase64 = (buffer) => {
-            const bytes = new Uint8Array(buffer);
-            let binary = "";
-            for (let i = 0; i < bytes.byteLength; i++) {
-                binary += String.fromCharCode(bytes[i]);
-            }
-            return btoa(binary);
-        };
-        const onload_base64image = (response) => {
-            const base64data = arrayBufferToBase64(response.response);
-            this.getGeminiPictureEvaluation(base64data).then((evaluation) => {
-                const evaluationText = JSON.parse(evaluation);
-                $("#gemini").replaceWith(`<div id='gemini' class="changes"><b>Gemini image evaluation: ${evaluationText.suggestion}</b><br><i>${evaluationText.reason}</i><br></div>`);
-                if (evaluationText.suggestion === "Reject") {
-                    $("#gemini").append(`<b>Violations:</b><ul>${evaluationText.violations.map((v) => `<li>${v}</li>`).join("")}</ul>`);
-                }
-            });
-        };
-        const evaluateImage = (displayAfterElement) => {
-            const imagePreview = $(".image-preview");
-            const geminiElement = $("#gemini");
-            if (imagePreview.length > 0 && geminiElement.length === 0) {
-                const src = imagePreview.attr("src");
-                if (src === this.lastEvaluatedImageSrc) {
-                    return;
-                }
-                this.lastEvaluatedImageSrc = src;
-                $(displayAfterElement).after("<div id='gemini' class='changes'><i>Gemini is evaluating...</i><br></div>");
-                GM_xmlhttpRequest({
-                    method: "GET",
-                    url: src,
-                    responseType: "arraybuffer",
-                    onload: onload_base64image.bind(this),
-                });
-            }
-        };
-        $(document.body).on("click", (_e) => {
-            if (this.evaluateDebounceTimer) {
-                clearTimeout(this.evaluateDebounceTimer);
-            }
-            this.evaluateDebounceTimer = setTimeout(() => {
-                evaluateImage("div.changes");
-            }, 300);
-        });
-    }
-    getGeminiTextResponse(context) {
-        return new Promise((resolve, reject) => {
-            if (!this.geminiApiKey) {
-                reject(new Error("Gemini API key is not set."));
-                return;
-            }
-            const model = "gemini-2.5-flash";
-            const message = {
-                contents: [{ parts: [{ text: context }] }],
-                generationConfig: { thinkingConfig: { thinkingBudget: 0 } },
-            };
-            GM_xmlhttpRequest({
-                method: "POST",
-                url: `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${this.geminiApiKey}`,
-                headers: { "Content-Type": "application/json" },
-                data: JSON.stringify(message),
-                onload: function (response) {
-                    try {
-                        const data = JSON.parse(response.responseText);
-                        // console.log(data["candidates"][0]["content"]["parts"][0]["text"]);
-                        resolve(data["candidates"][0]["content"]["parts"][0]["text"]);
-                    }
-                    catch (e) {
-                        console.error(new Error("Failed to parse response: " + e.message));
-                        reject(new Error(`Failed to parse Gemini response: ${e.message}`));
-                    }
-                },
-            });
-        });
-    }
-    getGeminiPictureEvaluation(base64ImageData) {
-        return new Promise((resolve, reject) => {
-            if (!this.geminiApiKey) {
-                reject(new Error("Gemini API key is not set."));
-                return;
-            }
-            const model = "gemini-2.5-flash";
-            const prompt = `You are an AI assistant specialized in Waze Map Editor (WME) venue image moderation.
-
-Your task is to evaluate an uploaded image of a Waze venue against Waze Map Editor's official guidelines for venue images. You will determine if the image should be 'Approved' or 'Rejected' and provide a clear, concise justification, along with specific guideline violations if rejected.
-
-I will provide you with an image for evaluation.
-
-Respond with a JSON object with the following fields:
-- "suggestion": "Approve" or "Reject"
-- "reason": Concise explanation for the decision
-- "violations": Array of violation codes if rejected. Valid codes: "IRRELEVANT_IMAGE", "LOW_QUALITY", "INAPPROPRIATE_CONTENT", "PERSONAL_INFORMATION", "SCREENSHOT_OF_MAP", "EXCESSIVE_TEXT_OR_OVERLAYS", "COPYRIGHTED_MATERIAL", "ORIENTATION_OR_CROPPING_ISSUE", "DUPLICATE_IMAGE", "OTHER_GENERAL_ISSUE"
-
-Waze Venue Image Guidelines to Consider:
-
-1.  **Relevance:** The image *must* clearly depict the venue/business itself (e.g., its entrance, sign, storefront). No random objects, people (unless part of a large crowd at an event, but generally avoided), or irrelevant scenery.
-2.  **Quality:** Images must be clear, well-lit, in focus, and not blurry, pixelated, overexposed, or excessively dark.
-3.  **Appropriateness:** No offensive, violent, sexually explicit, or hateful content.
-4.  **No Personal Information:** Avoid identifiable faces (especially children), license plates, or other sensitive personal data unless it's an unchangeable part of the venue's permanent signage.
-5.  **No Map Screenshots:** Do not approve images that are screenshots of Waze, Google Maps, or any other navigation/map application.
-6.  **Minimal Text/Overlays:** Avoid images with excessive text, watermarks, promotional overlays, or graphic elements that are not part of the venue's physical branding/signage. A clear logo on a sign is generally fine; a flyer overlay is not.
-7.  **Copyright:** Avoid copyrighted images without explicit permission (AI should err on the side of caution).
-8.  **Focus:** The primary subject of the image should be the venue.
-9.  **Orientation:** Landscape orientation is generally preferred for display, but a good quality portrait image of a tall building is acceptable if it clearly shows the venue. Poor rotation is a rejection reason.
-
-Decision Logic:
-
-* If the image adheres to all the above guidelines, set 'decision' to "Approved".
-* If the image violates one or more guidelines, set 'decision' to "Rejected" and list *all* applicable violation codes in the 'violations' array.`;
-            const message = {
-                contents: [
-                    {
-                        parts: [
-                            {
-                                inlineData: {
-                                    mimeType: "image/jpeg",
-                                    data: base64ImageData,
-                                },
-                            },
-                            {
-                                text: prompt,
-                            },
-                        ],
-                    },
-                ],
-                generationConfig: {
-                    thinkingConfig: { thinkingBudget: 0 },
-                    responseMimeType: "application/json",
-                },
-            };
-            GM_xmlhttpRequest({
-                method: "POST",
-                url: `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${this.geminiApiKey}`,
-                headers: { "Content-Type": "application/json" },
-                data: JSON.stringify(message),
-                onload: function (response) {
-                    try {
-                        const data = JSON.parse(response.responseText);
-                        // console.log(data["candidates"][0]["content"]["parts"][0]["text"]);
-                        resolve(data["candidates"][0]["content"]["parts"][0]["text"]);
-                    }
-                    catch (e) {
-                        console.log(new Error("Failed to parse response: " + e.message));
-                        reject(new Error(`Failed to parse Gemini response: ${e.message}`));
-                    }
-                },
-            });
-        });
     }
 }
 
@@ -2705,13 +3057,22 @@ class PluginManager {
     getLayer(name) {
         return this.layerRegistry.get(name);
     }
+    /**
+     * Retrieves a plugin by its key.
+     *
+     * @param {string} key - The key associated with the plugin.
+     * @return {IPlugin | undefined} The plugin instance, or undefined if not found.
+     */
+    getPlugin(key) {
+        return this.plugins[key];
+    }
 }
 PluginManager.instance = new PluginManager(SettingsStorage.instance);
 
 ;// ./src/index.ts
 
 
-const updateMessage = `Version 2026.01.29.1: Improved Gemini image evaluation performance with debounced click handling, image caching, proper binary-to-base64 conversion, and faster API responses.`;
+const updateMessage = `Version 2026.02.05.1: Fixed IMAGE PUR evaluation and improved Gemini error handling with quota detection and clearer status indicators.`;
 var sdk;
 console.log("[WazeMY] Script started");
 unsafeWindow.SDK_INITIALIZED.then(initScript);
