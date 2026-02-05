@@ -297,10 +297,12 @@ export default class PluginPlaces implements IPlugin {
             let imageUrl: string | undefined;
             if (isImagePUR) {
               const pur = venue.venueUpdateRequests?.[0];
-              // For IMAGE type PURs, the PUR's own id is the image identifier
-              const imgId = pur?.id;
-              if (imgId) {
-                imageUrl = `https://www.waze.com/venue_images/${imgId}`;
+              // Find the unapproved image in venue.images that matches the PUR
+              const pendingImage = venue.images?.find(
+                (img: any) => img.id === pur?.id || img.approved === false,
+              );
+              if (pendingImage?.id) {
+                imageUrl = `https://venue-image.waze.com/${pendingImage.id}`;
               }
             }
 
@@ -696,7 +698,7 @@ export default class PluginPlaces implements IPlugin {
   updateSettings(settings: any): void {
     if (settings.enable === true) {
       this.enable();
-    } else {
+    } else if (settings.enable === false) {
       this.disable();
     }
     console.log("[WazeMY] PluginPlaces settings updated.", settings);

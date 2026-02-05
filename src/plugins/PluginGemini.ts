@@ -140,34 +140,37 @@ export default class PluginGemini implements IPlugin {
    * @return {void} This function does not return anything.
    */
   updateSettings(settings: any): void {
-    if (settings.enable) {
-      if (settings.enable === true) {
-        this.enable();
-      } else {
-        this.disable();
-      }
+    if (settings.enable === true) {
+      this.enable();
+    } else if (settings.enable === false) {
+      this.disable();
+    }
+
+    if (settings.geminiApiKey !== undefined) {
+      this.geminiApiKey = settings.geminiApiKey;
     }
 
     console.log("[WazeMY] PluginGemini settings updated.");
   }
 
   /**
-   * Initialize the helper for venue update request image.
-   *
-   * @return {void} This function does not return anything.
+   * Converts an ArrayBuffer to a base64 encoded string.
+   */
+  private arrayBufferToBase64(buffer: ArrayBuffer): string {
+    const bytes = new Uint8Array(buffer);
+    let binary = "";
+    for (let i = 0; i < bytes.byteLength; i++) {
+      binary += String.fromCharCode(bytes[i]);
+    }
+    return btoa(binary);
+  }
+
+  /**
+   * Initialize the helper for venue update request image evaluation.
    */
   initializeVenueUpdateRequestImageHelper(): void {
-    const arrayBufferToBase64 = (buffer: ArrayBuffer): string => {
-      const bytes = new Uint8Array(buffer);
-      let binary = "";
-      for (let i = 0; i < bytes.byteLength; i++) {
-        binary += String.fromCharCode(bytes[i]);
-      }
-      return btoa(binary);
-    };
-
     const onload_base64image = (response: any): void => {
-      const base64data = arrayBufferToBase64(response.response);
+      const base64data = this.arrayBufferToBase64(response.response);
       this.getGeminiPictureEvaluation(base64data).then((evaluation: string) => {
         const evaluationText = JSON.parse(evaluation);
         this.lastEvaluationResult = evaluationText;
@@ -329,13 +332,23 @@ Decision Logic:
                 return;
               }
 
-              // Detect API key errors
+              // Detect API key errors (be more specific to avoid false positives)
               if (
-                errorStatus === "INVALID_ARGUMENT" ||
                 errorStatus === "UNAUTHENTICATED" ||
                 errorMsg.toLowerCase().includes("api key")
               ) {
                 reject(new GeminiError("Invalid API key", "api_key"));
+                return;
+              }
+
+              // Detect image processing errors
+              if (
+                errorStatus === "INVALID_ARGUMENT" &&
+                errorMsg.toLowerCase().includes("image")
+              ) {
+                reject(
+                  new GeminiError("Invalid image: " + errorMsg, "unknown"),
+                );
                 return;
               }
 
@@ -398,12 +411,17 @@ Decision Logic:
         url: imageUrl,
         responseType: "arraybuffer",
         onload: (response: any) => {
-          const bytes = new Uint8Array(response.response);
-          let binary = "";
-          for (let i = 0; i < bytes.byteLength; i++) {
-            binary += String.fromCharCode(bytes[i]);
+          if (response.status >= 400) {
+            reject(
+              new GeminiError(
+                `Image fetch failed: HTTP ${response.status}`,
+                "network",
+              ),
+            );
+            return;
           }
-          const base64data = btoa(binary);
+
+          const base64data = this.arrayBufferToBase64(response.response);
 
           this.getGeminiPictureEvaluation(base64data)
             .then((evaluation: string) => {
@@ -413,7 +431,7 @@ Decision Logic:
             .catch(reject);
         },
         onerror: (error: any) => {
-          reject(new Error(`Failed to fetch image: ${error}`));
+          reject(new GeminiError(`Failed to fetch image: ${error}`, "network"));
         },
       });
     });
