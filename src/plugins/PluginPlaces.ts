@@ -10,6 +10,18 @@ import PluginGemini, {
   VIOLATION_TO_WME_REASON,
 } from "./PluginGemini";
 
+const VENUE_IMAGE_BASE_URL = "https://venue-image.waze.com";
+
+const GEMINI_ERROR_INFO: Record<string, { icon: string; tooltip: string }> = {
+  quota: { icon: "Q", tooltip: "Gemini API quota exceeded - try again later" },
+  api_key: { icon: "K", tooltip: "Invalid Gemini API key - check settings" },
+  network: { icon: "N", tooltip: "Network error - check your connection" },
+  unknown: {
+    icon: "!",
+    tooltip: "Evaluation failed - check console for details",
+  },
+};
+
 export default class PluginPlaces implements IPlugin {
   private sdk: WmeSDK;
   private sidebarElements: {
@@ -105,6 +117,7 @@ export default class PluginPlaces implements IPlugin {
 
       // Handle Scan button.
       $("#wazemyPlaces_scan").on("click", async () => {
+        const pluginSdk = this.sdk;
         $("#wazemyPlaces_scanStatus").text("Scanning tiles.");
         $("#wazemyPlaces_venues > tbody").empty();
 
@@ -302,7 +315,7 @@ export default class PluginPlaces implements IPlugin {
                 (img: any) => img.id === pur?.id || img.approved === false,
               );
               if (pendingImage?.id) {
-                imageUrl = `https://venue-image.waze.com/${pendingImage.id}`;
+                imageUrl = `${VENUE_IMAGE_BASE_URL}/${pendingImage.id}`;
               }
             }
 
@@ -340,21 +353,6 @@ export default class PluginPlaces implements IPlugin {
         ) as PluginGemini;
         const imagePURs = processedVenues.filter(
           (pv) => pv.isImagePUR && pv.imageUrl,
-        );
-
-        // Debug logging for Gemini evaluation
-        const allImagePURs = processedVenues.filter((pv) => pv.isImagePUR);
-        console.log(
-          `[WazeMY] Image PURs: ${allImagePURs.length} total, ${imagePURs.length} with imageUrl`,
-        );
-        if (allImagePURs.length > 0 && imagePURs.length === 0) {
-          console.log(
-            "[WazeMY] Image PURs found but no imageUrl. First IMAGE PUR data:",
-            allImagePURs[0].venue.venueUpdateRequests?.[0],
-          );
-        }
-        console.log(
-          `[WazeMY] Gemini plugin found: ${!!geminiPlugin}, configured: ${geminiPlugin?.isConfigured()}`,
         );
 
         if (geminiPlugin?.isConfigured() && imagePURs.length > 0) {
@@ -497,32 +495,8 @@ export default class PluginPlaces implements IPlugin {
             }
           } else if (pv.isImagePUR && pv.geminiError) {
             // Show specific error indicators
-            const errorInfo: Record<
-              string,
-              { icon: string; label: string; tooltip: string }
-            > = {
-              quota: {
-                icon: "Q",
-                label: "Quota",
-                tooltip: "Gemini API quota exceeded - try again later",
-              },
-              api_key: {
-                icon: "K",
-                label: "Key",
-                tooltip: "Invalid Gemini API key - check settings",
-              },
-              network: {
-                icon: "N",
-                label: "Net",
-                tooltip: "Network error - check your connection",
-              },
-              unknown: {
-                icon: "!",
-                label: "Error",
-                tooltip: "Evaluation failed - check console for details",
-              },
-            };
-            const info = errorInfo[pv.geminiError] || errorInfo.unknown;
+            const info =
+              GEMINI_ERROR_INFO[pv.geminiError] || GEMINI_ERROR_INFO.unknown;
             aiHTML = `<td class="wazemyPlaces_ai_error" title="${info.tooltip}">${info.icon}</td>`;
           } else if (pv.isImagePUR && !pv.geminiResult) {
             // No evaluation attempted
@@ -567,11 +541,7 @@ export default class PluginPlaces implements IPlugin {
           }
 
           // Center map on venue first
-          const sdk = unsafeWindow.getWmeSdk({
-            scriptId: "wme-wazemy-places-reject",
-            scriptName: "WazeMY",
-          });
-          sdk.Map.setMapCenter({
+          pluginSdk.Map.setMapCenter({
             lonLat: { lon: venue.lon, lat: venue.lat },
           });
 
