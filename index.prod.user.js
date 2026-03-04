@@ -1914,32 +1914,34 @@ class PluginGemini {
      * @return {void} This function does not return anything.
      */
     updateSettings(settings) {
-        if (settings.enable) {
-            if (settings.enable === true) {
-                this.enable();
-            }
-            else {
-                this.disable();
-            }
+        if (settings.enable === true) {
+            this.enable();
+        }
+        else if (settings.enable === false) {
+            this.disable();
+        }
+        if (settings.geminiApiKey !== undefined) {
+            this.geminiApiKey = settings.geminiApiKey;
         }
         console.log("[WazeMY] PluginGemini settings updated.");
     }
     /**
-     * Initialize the helper for venue update request image.
-     *
-     * @return {void} This function does not return anything.
+     * Converts an ArrayBuffer to a base64 encoded string.
+     */
+    arrayBufferToBase64(buffer) {
+        const bytes = new Uint8Array(buffer);
+        let binary = "";
+        for (let i = 0; i < bytes.byteLength; i++) {
+            binary += String.fromCharCode(bytes[i]);
+        }
+        return btoa(binary);
+    }
+    /**
+     * Initialize the helper for venue update request image evaluation.
      */
     initializeVenueUpdateRequestImageHelper() {
-        const arrayBufferToBase64 = (buffer) => {
-            const bytes = new Uint8Array(buffer);
-            let binary = "";
-            for (let i = 0; i < bytes.byteLength; i++) {
-                binary += String.fromCharCode(bytes[i]);
-            }
-            return btoa(binary);
-        };
         const onload_base64image = (response) => {
-            const base64data = arrayBufferToBase64(response.response);
+            const base64data = this.arrayBufferToBase64(response.response);
             this.getGeminiPictureEvaluation(base64data).then((evaluation) => {
                 const evaluationText = JSON.parse(evaluation);
                 this.lastEvaluationResult = evaluationText;
@@ -2082,11 +2084,16 @@ Decision Logic:
                                 reject(new GeminiError("API quota exceeded", "quota"));
                                 return;
                             }
-                            // Detect API key errors
-                            if (errorStatus === "INVALID_ARGUMENT" ||
-                                errorStatus === "UNAUTHENTICATED" ||
+                            // Detect API key errors (be more specific to avoid false positives)
+                            if (errorStatus === "UNAUTHENTICATED" ||
                                 errorMsg.toLowerCase().includes("api key")) {
                                 reject(new GeminiError("Invalid API key", "api_key"));
+                                return;
+                            }
+                            // Detect image processing errors
+                            if (errorStatus === "INVALID_ARGUMENT" &&
+                                errorMsg.toLowerCase().includes("image")) {
+                                reject(new GeminiError("Invalid image: " + errorMsg, "unknown"));
                                 return;
                             }
                             reject(new GeminiError(`Gemini API error: ${data.error.message || JSON.stringify(data.error)}`, "unknown"));
@@ -2129,12 +2136,11 @@ Decision Logic:
                 url: imageUrl,
                 responseType: "arraybuffer",
                 onload: (response) => {
-                    const bytes = new Uint8Array(response.response);
-                    let binary = "";
-                    for (let i = 0; i < bytes.byteLength; i++) {
-                        binary += String.fromCharCode(bytes[i]);
+                    if (response.status >= 400) {
+                        reject(new GeminiError(`Image fetch failed: HTTP ${response.status}`, "network"));
+                        return;
                     }
-                    const base64data = btoa(binary);
+                    const base64data = this.arrayBufferToBase64(response.response);
                     this.getGeminiPictureEvaluation(base64data)
                         .then((evaluation) => {
                         const result = JSON.parse(evaluation);
@@ -2143,7 +2149,7 @@ Decision Logic:
                         .catch(reject);
                 },
                 onerror: (error) => {
-                    reject(new Error(`Failed to fetch image: ${error}`));
+                    reject(new GeminiError(`Failed to fetch image: ${error}`, "network"));
                 },
             });
         });
@@ -2161,6 +2167,16 @@ Decision Logic:
 
 
 
+const VENUE_IMAGE_BASE_URL = "https://venue-image.waze.com";
+const GEMINI_ERROR_INFO = {
+    quota: { icon: "Q", tooltip: "Gemini API quota exceeded - try again later" },
+    api_key: { icon: "K", tooltip: "Invalid Gemini API key - check settings" },
+    network: { icon: "N", tooltip: "Network error - check your connection" },
+    unknown: {
+        icon: "!",
+        tooltip: "Evaluation failed - check console for details",
+    },
+};
 class PluginPlaces {
     constructor() {
         this.sidebarElements = null;
@@ -2242,6 +2258,7 @@ class PluginPlaces {
             }
             // Handle Scan button.
             $("#wazemyPlaces_scan").on("click", async () => {
+                const pluginSdk = this.sdk;
                 $("#wazemyPlaces_scanStatus").text("Scanning tiles.");
                 $("#wazemyPlaces_venues > tbody").empty();
                 const kvmrLayer = PluginManager.instance.getLayer("__KlangValley");
@@ -2397,10 +2414,10 @@ class PluginPlaces {
                         let imageUrl;
                         if (isImagePUR) {
                             const pur = venue.venueUpdateRequests?.[0];
-                            // For IMAGE type PURs, the PUR's own id is the image identifier
-                            const imgId = pur?.id;
-                            if (imgId) {
-                                imageUrl = `https://www.waze.com/venue_images/${imgId}`;
+                            // Find the unapproved image in venue.images that matches the PUR
+                            const pendingImage = venue.images?.find((img) => img.id === pur?.id || img.approved === false);
+                            if (pendingImage?.id) {
+                                imageUrl = `${VENUE_IMAGE_BASE_URL}/${pendingImage.id}`;
                             }
                         }
                         processedVenues.push({
@@ -2434,13 +2451,6 @@ class PluginPlaces {
                 // Evaluate IMAGE PURs with Gemini AI
                 const geminiPlugin = PluginManager.instance.getPlugin("gemini");
                 const imagePURs = processedVenues.filter((pv) => pv.isImagePUR && pv.imageUrl);
-                // Debug logging for Gemini evaluation
-                const allImagePURs = processedVenues.filter((pv) => pv.isImagePUR);
-                console.log(`[WazeMY] Image PURs: ${allImagePURs.length} total, ${imagePURs.length} with imageUrl`);
-                if (allImagePURs.length > 0 && imagePURs.length === 0) {
-                    console.log("[WazeMY] Image PURs found but no imageUrl. First IMAGE PUR data:", allImagePURs[0].venue.venueUpdateRequests?.[0]);
-                }
-                console.log(`[WazeMY] Gemini plugin found: ${!!geminiPlugin}, configured: ${geminiPlugin?.isConfigured()}`);
                 if (geminiPlugin?.isConfigured() && imagePURs.length > 0) {
                     let quotaExceeded = false;
                     let evaluated = 0;
@@ -2566,29 +2576,7 @@ class PluginPlaces {
                     }
                     else if (pv.isImagePUR && pv.geminiError) {
                         // Show specific error indicators
-                        const errorInfo = {
-                            quota: {
-                                icon: "Q",
-                                label: "Quota",
-                                tooltip: "Gemini API quota exceeded - try again later",
-                            },
-                            api_key: {
-                                icon: "K",
-                                label: "Key",
-                                tooltip: "Invalid Gemini API key - check settings",
-                            },
-                            network: {
-                                icon: "N",
-                                label: "Net",
-                                tooltip: "Network error - check your connection",
-                            },
-                            unknown: {
-                                icon: "!",
-                                label: "Error",
-                                tooltip: "Evaluation failed - check console for details",
-                            },
-                        };
-                        const info = errorInfo[pv.geminiError] || errorInfo.unknown;
+                        const info = GEMINI_ERROR_INFO[pv.geminiError] || GEMINI_ERROR_INFO.unknown;
                         aiHTML = `<td class="wazemyPlaces_ai_error" title="${info.tooltip}">${info.icon}</td>`;
                     }
                     else if (pv.isImagePUR && !pv.geminiResult) {
@@ -2627,11 +2615,7 @@ class PluginPlaces {
                         return;
                     }
                     // Center map on venue first
-                    const sdk = unsafeWindow.getWmeSdk({
-                        scriptId: "wme-wazemy-places-reject",
-                        scriptName: "WazeMY",
-                    });
-                    sdk.Map.setMapCenter({
+                    pluginSdk.Map.setMapCenter({
                         lonLat: { lon: venue.lon, lat: venue.lat },
                     });
                     // Disable button and show progress
@@ -2733,7 +2717,7 @@ class PluginPlaces {
         if (settings.enable === true) {
             this.enable();
         }
-        else {
+        else if (settings.enable === false) {
             this.disable();
         }
         console.log("[WazeMY] PluginPlaces settings updated.", settings);
