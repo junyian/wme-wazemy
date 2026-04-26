@@ -1,7 +1,7 @@
 {
   "name": "wme-wazemy",
   "description": "Tampermonkey script for Waze map editing in Malaysia",
-  "version": "2026.02.05.1",
+  "version": "2026.04.26.1",
   "author": {
     "name": "junyianl",
     "email": "junyian@gmail.com"
@@ -20,8 +20,8 @@
   },
   "private": true,
   "dependencies": {
-    "@google/genai": "^1.5.1",
-    "@trim21/gm-fetch": "^0.1.15",
+    "@google/genai": "^1.50.1",
+    "@trim21/gm-fetch": "^0.1.16",
     "jquery": "^3.7.1"
   },
   "lint-staged": {
@@ -30,29 +30,29 @@
     ]
   },
   "devDependencies": {
-    "@types/geojson": "^7946.0.14",
+    "@types/geojson": "^7946.0.16",
     "@types/greasemonkey": "^4.0.7",
-    "@types/jquery": "^3.5.32",
-    "@types/node": "^20.12.7",
-    "@types/tampermonkey": "^5.0.3",
-    "browserslist": "^4.23.0",
+    "@types/jquery": "^3.5.34",
+    "@types/node": "^20.19.39",
+    "@types/tampermonkey": "^5.0.5",
+    "browserslist": "^4.28.2",
     "cross-env": "^7.0.3",
-    "css-loader": "^7.1.1",
-    "husky": "^9.0.11",
-    "less": "^4.2.0",
-    "less-loader": "^12.2.0",
-    "lint-staged": "^15.2.2",
-    "prettier": "^3.2.5",
+    "css-loader": "^7.1.4",
+    "husky": "^9.1.7",
+    "less": "^4.6.4",
+    "less-loader": "^12.3.2",
+    "lint-staged": "^15.5.2",
+    "prettier": "^3.8.3",
     "style-loader": "^4.0.0",
-    "ts-loader": "^9.5.1",
-    "typescript": "^5.4.5",
-    "userscript-metadata-webpack-plugin": "^0.4.0",
-    "webpack": "^5.91.0",
+    "ts-loader": "^9.5.7",
+    "typescript": "^5.9.3",
+    "userscript-metadata-webpack-plugin": "^0.4.2",
+    "webpack": "^5.106.2",
     "webpack-bundle-analyzer": "^4.10.2",
     "webpack-cli": "^5.1.4",
     "webpack-livereload-plugin": "^3.0.2",
     "webpack-merge": "^5.10.0",
-    "webpack-sources": "^3.2.3",
+    "webpack-sources": "^3.4.0",
     "wme-sdk-typings": "https://web-assets.waze.com/wme_sdk_docs/production/latest/wme-sdk-typings.tgz"
   }
 }
