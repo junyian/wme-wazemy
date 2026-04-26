@@ -2,7 +2,7 @@ import "./style/main.less";
 import PluginManager from "./PluginManager";
 import { WmeSDK } from "wme-sdk-typings";
 
-const updateMessage: string = `Version 2026.02.05.1: Fixed IMAGE PUR evaluation and improved Gemini error handling with quota detection and clearer status indicators.`;
+const updateMessage: string = `Version 2026.04.26.1: Removed WazeWrap temporarily until further notice.`;
 
 var sdk: WmeSDK;
 
@@ -23,6 +23,10 @@ function initScript() {
 
 function initializeWazeMY() {
   console.log("[WazeMY] WME ready");
+
+  // if (WazeWrap && WazeWrap.Ready) {
+  //   WazeWrap.Alerts.success("wme-wazemy", "Script initialized");
+  // }
 
   sdk.Sidebar.registerScriptTab().then(
     (sidebarResult: RegisterSidebarTabResult) => {
@@ -60,13 +64,15 @@ function initializeWazeMY() {
           </div>
         </div>
       `;
-      WazeWrap.Interface.ShowScriptUpdate(
-        "WME WazeMY",
-        GM_info.script.version,
-        updateMessage,
-        "https://greasyfork.org/en/scripts/404584-wazemy",
-        "javascript:alert('No forum available');",
-      );
+      // WazeWrap.Interface.ShowScriptUpdate(
+      //   "WME WazeMY",
+      //   GM_info.script.version,
+      //   updateMessage,
+      //   "https://greasyfork.org/en/scripts/404584-wazemy",
+      //   "javascript:alert('No forum available');",
+      // );
+      console.info(["wme-wazemy", updateMessage]);
+
       const pluginManager = PluginManager.instance;
 
       pluginManager.addPlugin("copylatlon", "PluginCopyLatLon");
