@@ -7,12 +7,6 @@ declare var OpenLayers: any;
 
 declare var GM: any;
 
-interface WmeState {
-  isInitialMapDataLoaded: boolean; // if `wme-map-data-loaded` has already been dispatched
-  isInitialized: boolean; // if `wme-initialzied` has already been dispatched
-  isReady: boolean; // if `wme-ready` has already been dispatched
-}
-
 interface RegisterSidebarTabResult {
   tabLabel: HTMLElement;
   tabPane: HTMLElement;
@@ -20,7 +14,6 @@ interface RegisterSidebarTabResult {
 
 interface W {
   userscripts: {
-    state: WmeState;
     registerSidebarTab(scriptId: string): RegisterSidebarTabResult;
     waitForElementConnected(el: HTMLElement): Promise<void>;
     removeSidebarTab(scriptId: string): void;
@@ -34,16 +27,20 @@ interface W {
     getMarkerElementByDataModel(model: DataModelObject): HTMLElement | null;
     getDataModelByFeatureElement(featureEl: SVGElement): DataModelObject | null;
     getFeatureElementByDataModel(model: DataModelObject): SVGElement | null;
-    toGeoJSONGeometry(
-      geometry: OpenLayers.Geometry | GeoJSON.Geometry,
-    ): GeoJSON.Geometry;
-    toOLGeometry(
-      geometry: OpenLayers.Geometry | GeoJSON.Geometry,
-    ): OpenLayers.Geometry;
+    // toGeoJSONGeometry(
+    //   geometry: OpenLayers.Geometry | GeoJSON.Geometry,
+    // ): GeoJSON.Geometry;
+    // toOLGeometry(
+    //   geometry: OpenLayers.Geometry | GeoJSON.Geometry,
+    // ): OpenLayers.Geometry;
     convertWktToGeoJSON(geometry: GeoJSON.Geometry): string; // WKT string
     convertGeoJSONToWkt(geometry: string /* WKT string */): GeoJSON.Geometry;
   };
   map: any;
+}
+
+interface Alerts {
+  success(scriptName: string, message: string): void;
 }
 
 interface DataModelObject {}
@@ -96,6 +93,8 @@ interface WazeWrap {
   Events: Events;
   Interface: Interface;
   User: User;
+  Ready: boolean;
+  Alerts: Alerts;
 }
 declare var W: W;
 declare var WazeWrap: WazeWrap;
