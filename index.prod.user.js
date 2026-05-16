@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name        WME WazeMY
 // @namespace   https://www.github.com/junyian/
-// @version     2026.04.26.1
+// @version     2026.05.17.1
 // @author      junyianl <junyian@gmail.com>
 // @source      https://github.com/junyian/wme-wazemy
 // @license     MIT
@@ -3056,7 +3056,7 @@ PluginManager.instance = new PluginManager(SettingsStorage.instance);
 ;// ./src/index.ts
 
 
-const updateMessage = `Version 2026.04.26.1: Removed WazeWrap temporarily until further notice.`;
+const updateMessage = `Version 2026.05.17.1: Restored WazeWrap.`;
 var sdk;
 console.log("[WazeMY] Script started");
 unsafeWindow.SDK_INITIALIZED.then(initScript);
@@ -3072,9 +3072,9 @@ function initScript() {
 }
 function initializeWazeMY() {
     console.log("[WazeMY] WME ready");
-    // if (WazeWrap && WazeWrap.Ready) {
-    //   WazeWrap.Alerts.success("wme-wazemy", "Script initialized");
-    // }
+    if (WazeWrap && WazeWrap.Ready) {
+        WazeWrap.Alerts.success("wme-wazemy", "Script initialized");
+    }
     sdk.Sidebar.registerScriptTab().then((sidebarResult) => {
         sidebarResult.tabLabel.innerHTML = "WazeMY";
         sidebarResult.tabLabel.title = "WazeMY";
@@ -3110,13 +3110,7 @@ function initializeWazeMY() {
           </div>
         </div>
       `;
-        // WazeWrap.Interface.ShowScriptUpdate(
-        //   "WME WazeMY",
-        //   GM_info.script.version,
-        //   updateMessage,
-        //   "https://greasyfork.org/en/scripts/404584-wazemy",
-        //   "javascript:alert('No forum available');",
-        // );
+        WazeWrap.Interface.ShowScriptUpdate("WME WazeMY", GM_info.script.version, updateMessage, "https://greasyfork.org/en/scripts/404584-wazemy", "javascript:alert('No forum available');");
         console.info(["wme-wazemy", updateMessage]);
         const pluginManager = PluginManager.instance;
         pluginManager.addPlugin("copylatlon", "PluginCopyLatLon");
