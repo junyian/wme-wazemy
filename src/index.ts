@@ -2,7 +2,7 @@ import "./style/main.less";
 import PluginManager from "./PluginManager";
 import { WmeSDK } from "wme-sdk-typings";
 
-const updateMessage: string = `Version 2026.05.17.1: Restored WazeWrap.`;
+const updateMessage: string = `Version 2026.09.23.1: Gemini image evaluation now rejects temporary structures (food trucks, stalls, pop-ups) as venue images.`;
 
 var sdk: WmeSDK;
 

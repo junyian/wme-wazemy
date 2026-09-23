@@ -14,6 +14,7 @@ export const VIOLATION_TO_WME_REASON: Record<string, string> = {
   COPYRIGHTED_MATERIAL: "1", // Copyrighted
   ORIENTATION_OR_CROPPING_ISSUE: "3", // Low quality
   DUPLICATE_IMAGE: "2", // Duplicate
+  TEMPORARY_STRUCTURE: "7", // Not relevant / wrong place
   OTHER_GENERAL_ISSUE: "8", // Other
 };
 
@@ -267,7 +268,7 @@ I will provide you with an image for evaluation.
 Respond with a JSON object with the following fields:
 - "suggestion": "Approve" or "Reject"
 - "reason": Concise explanation for the decision
-- "violations": Array of violation codes if rejected. Valid codes: "IRRELEVANT_IMAGE", "LOW_QUALITY", "INAPPROPRIATE_CONTENT", "PERSONAL_INFORMATION", "SCREENSHOT_OF_MAP", "EXCESSIVE_TEXT_OR_OVERLAYS", "COPYRIGHTED_MATERIAL", "ORIENTATION_OR_CROPPING_ISSUE", "DUPLICATE_IMAGE", "OTHER_GENERAL_ISSUE"
+- "violations": Array of violation codes if rejected. Valid codes: "IRRELEVANT_IMAGE", "LOW_QUALITY", "INAPPROPRIATE_CONTENT", "PERSONAL_INFORMATION", "SCREENSHOT_OF_MAP", "EXCESSIVE_TEXT_OR_OVERLAYS", "COPYRIGHTED_MATERIAL", "ORIENTATION_OR_CROPPING_ISSUE", "DUPLICATE_IMAGE", "TEMPORARY_STRUCTURE", "OTHER_GENERAL_ISSUE"
 
 Waze Venue Image Guidelines to Consider:
 
@@ -280,6 +281,7 @@ Waze Venue Image Guidelines to Consider:
 7.  **Copyright:** Avoid copyrighted images without explicit permission (AI should err on the side of caution).
 8.  **Focus:** The primary subject of the image should be the venue.
 9.  **Orientation:** Landscape orientation is generally preferred for display, but a good quality portrait image of a tall building is acceptable if it clearly shows the venue. Poor rotation is a rejection reason.
+10. **No Temporary Structures:** The image must depict a permanent, fixed venue. Reject images where the venue itself is a temporary structure, such as a food truck, market stall, pop-up booth, tent, or kiosk that is not permanently fixed in place.
 
 Decision Logic:
 

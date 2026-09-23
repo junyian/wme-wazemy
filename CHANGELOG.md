@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026.09.23.1
+
+*   Updated Gemini image evaluation guidelines
+    *   Added rule rejecting images where the venue is a temporary structure (food truck, market stall, pop-up booth, tent, kiosk)
+    *   Added `TEMPORARY_STRUCTURE` violation code, mapped to WME reason "Not relevant / wrong place"
+
 ## 2026.02.05.1
 
 *   Fixed IMAGE PUR evaluation in Places scanner
