@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name        WME WazeMY
 // @namespace   https://www.github.com/junyian/
-// @version     2026.05.17.1
+// @version     2026.09.23.1
 // @author      junyianl <junyian@gmail.com>
 // @source      https://github.com/junyian/wme-wazemy
 // @license     MIT
@@ -1814,6 +1814,7 @@ const VIOLATION_TO_WME_REASON = {
     COPYRIGHTED_MATERIAL: "1", // Copyrighted
     ORIENTATION_OR_CROPPING_ISSUE: "3", // Low quality
     DUPLICATE_IMAGE: "2", // Duplicate
+    TEMPORARY_STRUCTURE: "7", // Not relevant / wrong place
     OTHER_GENERAL_ISSUE: "8", // Other
 };
 class GeminiError extends Error {
@@ -2024,7 +2025,7 @@ I will provide you with an image for evaluation.
 Respond with a JSON object with the following fields:
 - "suggestion": "Approve" or "Reject"
 - "reason": Concise explanation for the decision
-- "violations": Array of violation codes if rejected. Valid codes: "IRRELEVANT_IMAGE", "LOW_QUALITY", "INAPPROPRIATE_CONTENT", "PERSONAL_INFORMATION", "SCREENSHOT_OF_MAP", "EXCESSIVE_TEXT_OR_OVERLAYS", "COPYRIGHTED_MATERIAL", "ORIENTATION_OR_CROPPING_ISSUE", "DUPLICATE_IMAGE", "OTHER_GENERAL_ISSUE"
+- "violations": Array of violation codes if rejected. Valid codes: "IRRELEVANT_IMAGE", "LOW_QUALITY", "INAPPROPRIATE_CONTENT", "PERSONAL_INFORMATION", "SCREENSHOT_OF_MAP", "EXCESSIVE_TEXT_OR_OVERLAYS", "COPYRIGHTED_MATERIAL", "ORIENTATION_OR_CROPPING_ISSUE", "DUPLICATE_IMAGE", "TEMPORARY_STRUCTURE", "OTHER_GENERAL_ISSUE"
 
 Waze Venue Image Guidelines to Consider:
 
@@ -2037,6 +2038,7 @@ Waze Venue Image Guidelines to Consider:
 7.  **Copyright:** Avoid copyrighted images without explicit permission (AI should err on the side of caution).
 8.  **Focus:** The primary subject of the image should be the venue.
 9.  **Orientation:** Landscape orientation is generally preferred for display, but a good quality portrait image of a tall building is acceptable if it clearly shows the venue. Poor rotation is a rejection reason.
+10. **No Temporary Structures:** The image must depict a permanent, fixed venue. Reject images where the venue itself is a temporary structure, such as a food truck, market stall, pop-up booth, tent, or kiosk that is not permanently fixed in place.
 
 Decision Logic:
 
@@ -3056,7 +3058,7 @@ PluginManager.instance = new PluginManager(SettingsStorage.instance);
 ;// ./src/index.ts
 
 
-const updateMessage = `Version 2026.05.17.1: Restored WazeWrap.`;
+const updateMessage = `Version 2026.09.23.1: Gemini image evaluation now rejects temporary structures (food trucks, stalls, pop-ups) as venue images.`;
 var sdk;
 console.log("[WazeMY] Script started");
 unsafeWindow.SDK_INITIALIZED.then(initScript);
