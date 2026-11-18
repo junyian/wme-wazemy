@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026.11.18.1
+
+*   Added a "Reset all settings" button in the WazeMY sidebar tab
+    *   Clears all stored WazeMY settings from local storage and reloads the page
+    *   Use this when settings saved by an older version cause unexpected behavior after an upgrade
+
 ## 2026.09.23.1
 
 *   Updated Gemini image evaluation guidelines

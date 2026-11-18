@@ -1,8 +1,9 @@
 import "./style/main.less";
 import PluginManager from "./PluginManager";
+import SettingsStorage from "./SettingsStorage";
 import { WmeSDK } from "wme-sdk-typings";
 
-const updateMessage: string = `Version 2026.09.23.1: Gemini image evaluation now rejects temporary structures (food trucks, stalls, pop-ups) as venue images.`;
+const updateMessage: string = `Version 2026.11.18.1: Added a Reset Settings button to clear stored settings left over from older versions.`;
 
 var sdk: WmeSDK;
 
@@ -62,6 +63,21 @@ function initializeWazeMY() {
               <div id="wazemySettings_gemini"></div>
             </fieldset>
           </div>
+          <div class="settings__form-group">
+            <fieldset class="wazemySettings">
+              <legend class="wazemySettingsLegend">
+                <wz-label>Reset</wz-label>
+              </legend>
+              <div id="wazemySettings_reset">
+                <wz-button id="wazemySettings_resetButton" color="secondary" size="sm">
+                  Reset all settings
+                </wz-button>
+                <div style="font-size: 10px; margin-top: 5px;">
+                  Clears all stored WazeMY settings (including the Gemini API key) and reloads the page.
+                </div>
+              </div>
+            </fieldset>
+          </div>
         </div>
       `;
       WazeWrap.Interface.ShowScriptUpdate(
@@ -72,6 +88,16 @@ function initializeWazeMY() {
         "javascript:alert('No forum available');",
       );
       console.info(["wme-wazemy", updateMessage]);
+
+      $("#wazemySettings_resetButton").on("click", () => {
+        const confirmed = confirm(
+          "Reset all WazeMY settings to defaults?\n\nThis also removes the saved Gemini API key. The page will reload.",
+        );
+        if (!confirmed) return;
+        SettingsStorage.instance.clearSettings();
+        console.log("[WazeMY] Settings reset");
+        location.reload();
+      });
 
       const pluginManager = PluginManager.instance;
 
