@@ -11,6 +11,7 @@
     "analize": "cross-env npm_config_report=true npm run build",
     "build": "webpack --config config/webpack.config.prod.cjs",
     "dev": "webpack --config config/webpack.config.dev.cjs",
+    "sdk:refresh": "node scripts/refresh-sdk-hash.cjs",
     "prepare": "husky install",
     "lint-staged": "lint-staged"
   },

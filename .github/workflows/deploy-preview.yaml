@@ -20,6 +20,8 @@ jobs:
           node-version: "lts/*"
           cache: "npm"
 
+      - name: Refresh wme-sdk-typings hash
+        run: node scripts/refresh-sdk-hash.cjs
       - run: npm ci
       - run: npm run build
 
