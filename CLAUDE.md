@@ -35,3 +35,4 @@ Use this documentation as the primary reference for:
 - Run `npm run build` for production builds
 - The tooltip feature uses WME SDK for event handling
 - All plugins extend the `IPlugin` interface
+- `wme-sdk-typings` is installed from a "latest" URL that Waze republishes in place. If `npm ci` fails with EINTEGRITY, run `npm run sdk:refresh` to update its hash in `package-lock.json`. CI runs this automatically before `npm ci`.
