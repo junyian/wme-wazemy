@@ -68,6 +68,15 @@ export default class SettingsStorage {
       this.saveSettings(settings);
     }
   }
+
+  /**
+   * Removes all stored settings from the local storage.
+   *
+   * @return {void} This function does not return anything.
+   */
+  clearSettings(): void {
+    localStorage.removeItem(this.storageKey);
+  }
 }
 
 SettingsStorage.instance = new SettingsStorage("WME_wazemySettings");
