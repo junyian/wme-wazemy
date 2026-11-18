@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name        WME WazeMY
 // @namespace   https://www.github.com/junyian/
-// @version     2026.09.23.1
+// @version     2026.11.18.1
 // @author      junyianl <junyian@gmail.com>
 // @source      https://github.com/junyian/wme-wazemy
 // @license     MIT
@@ -703,6 +703,14 @@ class SettingsStorage {
             delete settings[key];
             this.saveSettings(settings);
         }
+    }
+    /**
+     * Removes all stored settings from the local storage.
+     *
+     * @return {void} This function does not return anything.
+     */
+    clearSettings() {
+        localStorage.removeItem(this.storageKey);
     }
 }
 SettingsStorage.instance = new SettingsStorage("WME_wazemySettings");
@@ -3058,7 +3066,8 @@ PluginManager.instance = new PluginManager(SettingsStorage.instance);
 ;// ./src/index.ts
 
 
-const updateMessage = `Version 2026.09.23.1: Gemini image evaluation now rejects temporary structures (food trucks, stalls, pop-ups) as venue images.`;
+
+const updateMessage = `Version 2026.11.18.1: Added a Reset Settings button to clear stored settings left over from older versions.`;
 var sdk;
 console.log("[WazeMY] Script started");
 unsafeWindow.SDK_INITIALIZED.then(initScript);
@@ -3110,10 +3119,33 @@ function initializeWazeMY() {
               <div id="wazemySettings_gemini"></div>
             </fieldset>
           </div>
+          <div class="settings__form-group">
+            <fieldset class="wazemySettings">
+              <legend class="wazemySettingsLegend">
+                <wz-label>Reset</wz-label>
+              </legend>
+              <div id="wazemySettings_reset">
+                <wz-button id="wazemySettings_resetButton" color="secondary" size="sm">
+                  Reset all settings
+                </wz-button>
+                <div style="font-size: 10px; margin-top: 5px;">
+                  Clears all stored WazeMY settings (including the Gemini API key) and reloads the page.
+                </div>
+              </div>
+            </fieldset>
+          </div>
         </div>
       `;
         WazeWrap.Interface.ShowScriptUpdate("WME WazeMY", GM_info.script.version, updateMessage, "https://greasyfork.org/en/scripts/404584-wazemy", "javascript:alert('No forum available');");
         console.info(["wme-wazemy", updateMessage]);
+        $("#wazemySettings_resetButton").on("click", () => {
+            const confirmed = confirm("Reset all WazeMY settings to defaults?\n\nThis also removes the saved Gemini API key. The page will reload.");
+            if (!confirmed)
+                return;
+            SettingsStorage.instance.clearSettings();
+            console.log("[WazeMY] Settings reset");
+            location.reload();
+        });
         const pluginManager = PluginManager.instance;
         pluginManager.addPlugin("copylatlon", "PluginCopyLatLon");
         pluginManager.addPlugin("tooltip", "PluginTooltip");
